@@ -74,11 +74,12 @@
     .menu .proc-link.active { background: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary); }
     .menu .proc-link.active .proc-code { color: var(--color-primary); opacity: .85; }
     .proc-code { font-family: ui-monospace, "SFMono-Regular", monospace; font-size: .68rem; opacity: .5; }
-    .menu .cat-title { display: flex; align-items: center; justify-content: flex-start; text-align: left; gap: .4rem; padding: .42rem .6rem; width: 100%; box-sizing: border-box; margin: 0; font-size: .85rem; font-weight: 700; color: var(--color-base-content); }
+    .menu .cat-title { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; gap: .4rem; padding: .42rem .6rem; width: 100%; box-sizing: border-box; margin: 0; font-size: .85rem; font-weight: 700; color: var(--color-base-content); }
     .menu .proc-link.nested { padding-left: 1.2rem; padding-top: .34rem; padding-bottom: .34rem; border-left: 2px solid var(--color-base-300); margin-left: .75rem; width: calc(100% - .75rem); }
     .menu .proc-link.nested .proc-name { font-size: .8rem; font-weight: 500; opacity: .88; }
     .menu .proc-link.ref-only .proc-name { opacity: .8; }
-    .menu .proc-link.ref-only .ref-badge { font-size: .6rem; font-weight: 600; opacity: .55; border: 1px solid var(--color-base-300); border-radius: .3rem; padding: 0 .3rem; margin-top: .1rem; align-self: flex-start; }
+    .menu .proc-link .ref-badge { font-size: .6rem; font-weight: 600; opacity: .55; border: 1px solid var(--color-base-300); border-radius: .3rem; padding: 0 .3rem; margin-top: .1rem; align-self: flex-start; display: inline-block; }
+    .menu .sidebar-divider { height: 1px; background: var(--color-base-300); margin: .5rem .6rem; padding: 0; opacity: .7; }
 
     /* ---------- Wizard: progress rail ---------- */
     .wiz-rail { display: flex; align-items: center; gap: 0; padding: .35rem .2rem; overflow-x: auto; margin-bottom: 1.1rem; }
@@ -257,10 +258,12 @@
           cat.items.push({ p: p, i: i });
         });
         var html = '<div class="px-2 pb-2 pt-1"><div class="text-[0.65rem] font-semibold uppercase tracking-wider opacity-45">操作流程</div></div>';
+        var UTILITY_CATEGORIES = ["系統偏好設定"];
         html += '<ul class="menu w-full p-0 gap-0.5">';
         groups.forEach(function (g) {
           html += '<li class="menu-title px-2 pt-2 pb-1 text-[0.68rem] tracking-wide">' + esc(g.name) + "</li>";
           g.cats.forEach(function (cat) {
+            if (cat.name && UTILITY_CATEGORIES.indexOf(cat.name) !== -1) html += '<li class="sidebar-divider"></li>';
             if (cat.name) html += '<li class="cat-title">' + esc(cat.name) + "</li>";
             cat.items.forEach(function (o) {
               var noSteps = !o.p.steps || !o.p.steps.length;
