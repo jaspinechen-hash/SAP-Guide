@@ -68,6 +68,19 @@
       .backdrop, .hamburger { display: none !important; }
     }
 
+    /* ---------- Sidebar search ---------- */
+    .sidebar-search { position: sticky; top: 0; background: var(--color-base-100); z-index: 2; padding-top: .1rem; }
+    .search-box {
+      display: flex; align-items: center; gap: .45rem;
+      background: var(--color-base-200); border: 1px solid var(--color-base-300); border-radius: .6rem;
+      padding: .45rem .65rem; transition: border-color .15s, background-color .15s;
+    }
+    .search-box svg { flex: 0 0 auto; opacity: .5; }
+    .search-box:focus-within { border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-base-300)); background: var(--color-base-100); }
+    .search-box input { border: none; outline: none; background: transparent; font-size: .82rem; width: 100%; color: inherit; }
+    .search-box input::placeholder { color: currentColor; opacity: .5; }
+    .sidebar-empty { font-size: .8rem; opacity: .55; text-align: center; padding: 1.1rem .8rem; }
+
     /* ---------- Sidebar menu ---------- */
     .menu .proc-link { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; gap: .05rem; padding: .42rem .6rem; width: 100%; box-sizing: border-box; margin: 0; }
     .menu .proc-link .proc-name { font-size: .85rem; font-weight: 700; line-height: 1.25; text-align: left; }
@@ -80,6 +93,11 @@
     .menu .proc-link.ref-only .proc-name { opacity: .8; }
     .menu .proc-link .ref-badge { font-size: .6rem; font-weight: 600; opacity: .55; border: 1px solid var(--color-base-300); border-radius: .3rem; padding: 0 .3rem; margin-top: .1rem; align-self: flex-start; display: inline-block; }
     .menu .sidebar-divider { height: 1px; background: var(--color-base-300); margin: .5rem .6rem; padding: 0; opacity: .7; }
+
+    /* ---------- Wizard: step transition ---------- */
+    @keyframes wizStepIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+    .wiz-step-anim { animation: wizStepIn .22s cubic-bezier(.4,0,.2,1); }
+    @media (prefers-reduced-motion: reduce) { .wiz-step-anim { animation: none; } }
 
     /* ---------- Wizard: progress rail ---------- */
     .wiz-rail { display: flex; align-items: center; gap: 0; padding: .35rem .2rem; overflow-x: auto; margin-bottom: 1.1rem; }
@@ -254,6 +272,8 @@
         }).join('<span class="path-sep">›</span>');
       }
 
+      var sidebarQuery = "";
+
       function buildSidebar() {
         var groups = [];
         DATA.forEach(function (p, i) {
@@ -264,17 +284,22 @@
           if (!cat) { cat = { name: catName, items: [] }; g.cats.push(cat); }
           cat.items.push({ p: p, i: i });
         });
-        var html = '<div class="px-2 pb-2 pt-1"><div class="text-[0.65rem] font-semibold uppercase tracking-wider opacity-45">操作流程</div></div>';
+        var html = '<div class="sidebar-search px-2 pb-2 pt-1">' +
+          '<div class="search-box">' +
+          '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+          '<input type="text" id="sidebarSearch" placeholder="搜尋操作流程…" autocomplete="off" />' +
+          '</div></div>' +
+          '<div class="px-2 pb-2 pt-1"><div class="text-[0.65rem] font-semibold uppercase tracking-wider opacity-45">操作流程</div></div>';
         var UTILITY_CATEGORIES = ["系統偏好設定"];
         html += '<ul class="menu w-full p-0 gap-0.5">';
         groups.forEach(function (g) {
-          html += '<li class="menu-title px-2 pt-2 pb-1 text-[0.68rem] tracking-wide">' + esc(g.name) + "</li>";
+          html += '<li class="menu-title px-2 pt-2 pb-1 text-[0.68rem] tracking-wide" data-group="' + esc(g.name) + '">' + esc(g.name) + "</li>";
           g.cats.forEach(function (cat) {
-            if (cat.name && UTILITY_CATEGORIES.indexOf(cat.name) !== -1) html += '<li class="sidebar-divider"></li>';
-            if (cat.name) html += '<li class="cat-title">' + esc(cat.name) + "</li>";
+            if (cat.name && UTILITY_CATEGORIES.indexOf(cat.name) !== -1) html += '<li class="sidebar-divider" data-group="' + esc(g.name) + '" data-cat="' + esc(cat.name) + '"></li>';
+            if (cat.name) html += '<li class="cat-title" data-group="' + esc(g.name) + '" data-cat="' + esc(cat.name) + '">' + esc(cat.name) + "</li>";
             cat.items.forEach(function (o) {
               var noSteps = !o.p.steps || !o.p.steps.length;
-              html += '<li><a class="proc-link' + (cat.name ? " nested" : "") + (noSteps ? " ref-only" : "") + (o.i === active ? " active" : "") + '" data-i="' + o.i + '">' +
+              html += '<li data-group="' + esc(g.name) + '" data-cat="' + esc(cat.name) + '"><a class="proc-link' + (cat.name ? " nested" : "") + (noSteps ? " ref-only" : "") + (o.i === active ? " active" : "") + '" data-i="' + o.i + '">' +
                 '<span class="proc-name">' + esc(o.p.name) + "</span>" +
                 (o.p.code ? '<span class="proc-code">' + esc(o.p.code) + "</span>" : "") +
                 (o.p.pending ? '<span class="ref-badge">建置中</span>' : "") +
@@ -283,10 +308,46 @@
           });
         });
         html += "</ul>";
+        html += '<div class="sidebar-empty" id="sidebarEmpty" style="display:none">找不到符合的項目</div>';
         sidebar.innerHTML = html;
         sidebar.querySelectorAll(".proc-link").forEach(function (a) {
           a.addEventListener("click", function () { select(+a.dataset.i); });
         });
+        var searchEl = document.getElementById("sidebarSearch");
+        if (searchEl) {
+          searchEl.value = sidebarQuery;
+          searchEl.addEventListener("input", function () { filterSidebar(this.value); });
+        }
+        if (sidebarQuery) filterSidebar(sidebarQuery);
+      }
+
+      function filterSidebar(q) {
+        sidebarQuery = q;
+        var query = q.trim().toLowerCase();
+        var visibleGroups = {};
+        var visibleCats = {};
+        var anyVisible = !query;
+        sidebar.querySelectorAll("li[data-group]").forEach(function (li) {
+          var a = li.querySelector(".proc-link");
+          if (!a) return;
+          var name = a.querySelector(".proc-name").textContent.toLowerCase();
+          var match = !query || name.indexOf(query) !== -1;
+          li.style.display = match ? "" : "none";
+          if (match) {
+            anyVisible = true;
+            visibleGroups[li.dataset.group] = true;
+            visibleCats[li.dataset.group + "|" + li.dataset.cat] = true;
+          }
+        });
+        sidebar.querySelectorAll(".menu-title").forEach(function (li) {
+          li.style.display = (!query || visibleGroups[li.dataset.group]) ? "" : "none";
+        });
+        sidebar.querySelectorAll(".cat-title, .sidebar-divider").forEach(function (li) {
+          var key = li.dataset.group + "|" + li.dataset.cat;
+          li.style.display = (!query || visibleCats[key]) ? "" : "none";
+        });
+        var empty = document.getElementById("sidebarEmpty");
+        if (empty) empty.style.display = anyVisible ? "none" : "";
       }
 
       function renderShot(p, s, idx) {
@@ -382,7 +443,7 @@
         if (stepIndex < 0) stepIndex = 0;
         var last = stepIndex === Y - 1;
         var w = document.getElementById("wizard");
-        var h = railHtml(p) + renderStepCard(p, p.steps[stepIndex], stepIndex) + controlsHtml(p);
+        var h = '<div class="wiz-step-anim">' + railHtml(p) + renderStepCard(p, p.steps[stepIndex], stepIndex) + controlsHtml(p) + "</div>";
         // 結果區塊已依需求移除，不再顯示
         w.innerHTML = h;
 
