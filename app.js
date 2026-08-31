@@ -15,7 +15,12 @@
         "收貨作業": "mint",
         "系統偏好設定": "peach"
       };
-      function toneFor(p) { return (p && CATEGORY_TONE[p.category]) || ""; }
+      // 沒有子分類、但屬於不同系統（例如 TIPTOP）的項目，用系統本身的顏色頂上，一樣要「有顏色」
+      var GROUP_TONE = { "TIPTOP": "gold" };
+      function toneFor(p) {
+        if (!p) return "";
+        return CATEGORY_TONE[p.category] || GROUP_TONE[p.group] || "";
+      }
 
       var GATE_TREE = {
         id: "q1",
@@ -77,9 +82,11 @@
         var UTILITY_CATEGORIES = ["系統偏好設定"];
         html += '<ul class="menu w-full p-0 gap-0.5">';
         groups.forEach(function (g) {
-          html += '<li class="menu-title px-2 pt-2 pb-1 text-[0.68rem] tracking-wide">' + esc(g.name) + "</li>";
+          var altSystem = g.name !== "SAP"; // 不同系統（例如 TIPTOP）跟預設的 SAP 用不同標籤樣式，方便一眼分辨
+          if (altSystem) html += '<li class="sidebar-divider"></li>';
+          html += '<li class="menu-title px-2 pt-2 pb-1 text-[0.68rem] tracking-wide' + (altSystem ? " menu-title-system" : "") + '">' + esc(g.name) + "</li>";
           g.cats.forEach(function (cat) {
-            var tone = CATEGORY_TONE[cat.name] || "";
+            var tone = CATEGORY_TONE[cat.name] || GROUP_TONE[g.name] || "";
             if (cat.name && UTILITY_CATEGORIES.indexOf(cat.name) !== -1) html += '<li class="sidebar-divider"></li>';
             if (cat.name) html += '<li class="cat-title" data-tone="' + esc(tone) + '">' + esc(cat.name) + "</li>";
             cat.items.forEach(function (o) {
@@ -133,8 +140,10 @@
 
       function renderImages(images, title) {
         if (!images || !images.length) return "";
-        return images.map(function (src) {
-          return '<figure class="shot"><img src="' + src + '" alt="' + esc(title) + '" class="shot-img" /></figure>';
+        return images.map(function (img) {
+          var src = typeof img === "string" ? img : img.src;
+          var small = typeof img === "object" && img && img.small;
+          return '<figure class="shot' + (small ? " shot-small" : "") + '"><img src="' + src + '" alt="' + esc(title) + '" class="shot-img" /></figure>';
         }).join("");
       }
 
@@ -614,4 +623,52 @@
 
       buildSidebar();
       render();
+    })();
+
+    // ---------- 手機版：點擊截圖可放大檢視（獨立功能，不影響其他邏輯與電腦版行為） ----------
+    (function () {
+      var MOBILE_QUERY = "(max-width: 1023px)";
+      var overlay, overlayImg;
+
+      function ensureOverlay() {
+        if (overlay) return overlay;
+        overlay = document.createElement("div");
+        overlay.className = "img-lightbox-overlay";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.setAttribute("aria-label", "放大檢視截圖");
+        overlayImg = document.createElement("img");
+        var closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "img-lightbox-close";
+        closeBtn.setAttribute("aria-label", "關閉放大檢視");
+        closeBtn.textContent = "✕";
+        overlay.appendChild(overlayImg);
+        overlay.appendChild(closeBtn);
+        document.body.appendChild(overlay);
+
+        function close() {
+          overlay.classList.remove("show");
+          overlayImg.src = "";
+        }
+        overlay.addEventListener("click", close);
+        closeBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          close();
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") close();
+        });
+        return overlay;
+      }
+
+      document.addEventListener("click", function (e) {
+        var img = e.target.closest && e.target.closest(".shot-img");
+        if (!img) return;
+        if (!window.matchMedia(MOBILE_QUERY).matches) return; // 僅手機寬度啟用，電腦版維持原本行為不變
+        ensureOverlay();
+        overlayImg.src = img.currentSrc || img.src;
+        overlayImg.alt = img.alt || "";
+        overlay.classList.add("show");
+      });
     })();

@@ -18,6 +18,8 @@
       --accent-lavender-strong: #a996ee;
       --accent-rose: #ffdce6;
       --accent-rose-strong: #ff8fae;
+      --accent-gold: #faf2c6;
+      --accent-gold-strong: #e2c012;
 
       --shadow-soft: 0 2px 10px rgba(35, 32, 25, .07), 0 1px 2px rgba(35, 32, 25, .05);
       --shadow-lift: 0 12px 26px rgba(35, 32, 25, .13), 0 3px 8px rgba(35, 32, 25, .07);
@@ -183,11 +185,23 @@
     .menu .proc-link.nested.active[data-tone="mint"] { background: color-mix(in srgb, var(--accent-mint-strong) 16%, transparent); color: #2b7a5c; box-shadow: inset 2px 0 0 var(--accent-mint-strong); }
     .menu .proc-link.nested.active[data-tone="peach"] { background: color-mix(in srgb, var(--accent-peach-strong) 18%, transparent); color: #a35a1f; box-shadow: inset 2px 0 0 var(--accent-peach-strong); }
     .menu .proc-link.nested.active[data-tone="lavender"] { background: color-mix(in srgb, var(--accent-lavender-strong) 18%, transparent); color: #5b4aa8; box-shadow: inset 2px 0 0 var(--accent-lavender-strong); }
+    .menu .proc-link.active[data-tone="gold"] { background: color-mix(in srgb, var(--accent-gold-strong) 16%, transparent); color: #8a6410; box-shadow: inset 2px 0 0 var(--accent-gold-strong); }
     .menu .proc-link.nested { padding-left: 1.2rem; padding-top: .34rem; padding-bottom: .34rem; border-left: 2px solid var(--color-base-300); margin-left: .75rem; width: calc(100% - .75rem); border-radius: 0 .5rem .5rem 0; }
     .menu .proc-link.nested .proc-name { font-size: .8rem; font-weight: 500; opacity: .88; }
     .menu .proc-link.ref-only .proc-name { opacity: .8; }
     .menu .proc-link .ref-badge { font-size: .6rem; font-weight: 600; opacity: .55; border: 1px solid var(--color-base-300); border-radius: .3rem; padding: 0 .3rem; margin-top: .1rem; align-self: flex-start; display: inline-block; }
     .menu .sidebar-divider { height: 1px; background: var(--color-base-300); margin: .5rem .6rem; padding: 0; opacity: .7; }
+
+    /* ---------- 不同系統的分組標籤（例如 TIPTOP），跟預設 SAP 用不一樣的樣式凸顯出來，避免掃過去以為長得一樣 ----------
+       SAP 的分類色是「文字＋左側細線」的低調做法；這裡換一種做法──淡色底的小標籤，
+       一樣有顏色、跟 SAP 呈現方式不同，但維持跟整體側邊欄一樣柔和、不搶眼的調性，不做成實心大色塊。 */
+    .menu .menu-title.menu-title-system {
+      display: inline-flex; align-items: center; width: fit-content; max-width: calc(100% - 1rem);
+      margin: .35rem .5rem .3rem; padding: .16rem .6rem; border-radius: .45rem;
+      background: color-mix(in srgb, var(--accent-gold-strong) 20%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent-gold-strong) 42%, transparent);
+      color: #8a6410; opacity: 1; font-weight: 700;
+    }
 
     /* ---------- Wizard: progress rail ---------- */
     .wiz-rail { display: flex; align-items: center; gap: 0; padding: .35rem .2rem; overflow-x: auto; margin-bottom: 1.1rem; }
@@ -281,6 +295,8 @@
     }
     .shot-frame svg { width: 40px; height: 40px; opacity: .55; }
     .shot-img { width: 100%; display: block; border: 1px solid var(--color-base-300); border-radius: .85rem; }
+    /* 原始截圖本身就是小視窗（例如查詢清單彈窗），不要硬拉伸到跟版面同寬，維持原始比例、置中顯示即可 */
+    .shot-small .shot-img { width: auto; max-width: min(100%, 22rem); margin: 0 auto; }
     .shot-label { font-weight: 700; letter-spacing: .03em; font-size: .76rem; text-transform: uppercase; color: #6a7590; }
     .shot-tag { font-size: .72rem; font-family: ui-monospace, "SFMono-Regular", monospace; background: var(--color-base-100); border: 1px solid var(--color-base-300); border-radius: 999px; padding: .12rem .6rem; color: #5f6b85; }
     .shot figcaption { margin-top: .5rem; font-size: .79rem; opacity: .72; line-height: 1.45; }
@@ -355,6 +371,20 @@
     #content[data-tone="lavender"] .wiz-line.done { background: var(--accent-lavender-strong); }
     #content[data-tone="lavender"] .text-prim, #content[data-tone="lavender"] .md a { color: #5b4aa8 !important; }
     #content[data-tone="lavender"] .page-meta { color: #5b4aa8; opacity: .8; }
+
+    #content[data-tone="rose"] .step-num, #content[data-tone="rose"] .wiz-dot.current, #content[data-tone="rose"] .wiz-progress-bar, #content[data-tone="rose"] .badge-primary { background: var(--accent-rose-strong) !important; border-color: var(--accent-rose-strong) !important; }
+    #content[data-tone="rose"] .wiz-dot.done { background: color-mix(in srgb, var(--accent-rose-strong) 18%, #fff); border-color: var(--accent-rose-strong); color: #b34e6c; }
+    #content[data-tone="rose"] .wiz-dot.current { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-rose-strong) 20%, transparent); }
+    #content[data-tone="rose"] .wiz-line.done { background: var(--accent-rose-strong); }
+    #content[data-tone="rose"] .text-prim, #content[data-tone="rose"] .md a { color: #b34e6c !important; }
+    #content[data-tone="rose"] .page-meta { color: #b34e6c; opacity: .8; }
+
+    #content[data-tone="gold"] .step-num, #content[data-tone="gold"] .wiz-dot.current, #content[data-tone="gold"] .wiz-progress-bar, #content[data-tone="gold"] .badge-primary { background: var(--accent-gold-strong) !important; border-color: var(--accent-gold-strong) !important; }
+    #content[data-tone="gold"] .wiz-dot.done { background: color-mix(in srgb, var(--accent-gold-strong) 18%, #fff); border-color: var(--accent-gold-strong); color: #8a6410; }
+    #content[data-tone="gold"] .wiz-dot.current { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-gold-strong) 20%, transparent); }
+    #content[data-tone="gold"] .wiz-line.done { background: var(--accent-gold-strong); }
+    #content[data-tone="gold"] .text-prim, #content[data-tone="gold"] .md a { color: #8a6410 !important; }
+    #content[data-tone="gold"] .page-meta { color: #8a6410; opacity: .8; }
 
     /* 所有按鈕：hover 上浮、按下沉底回彈 */
     .btn { transition: transform .12s ease, box-shadow .12s ease, background-color .15s ease, border-color .15s ease; }
@@ -536,4 +566,30 @@
       100% { transform: scale(1.02); }
     }
     .gate-flow-choice.chosen { animation: gateBranchChosen .2s ease-out forwards; box-shadow: var(--shadow-lift); }
+
+    /* ---------- 手機版：點擊截圖放大檢視（新增功能，僅在手機寬度啟用，不影響其他樣式） ---------- */
+    @media (max-width: 1023px) {
+      .shot-img { cursor: zoom-in; }
+    }
+    .img-lightbox-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(15, 23, 42, .88);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.2rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity .18s ease;
+    }
+    .img-lightbox-overlay.show { opacity: 1; pointer-events: auto; }
+    .img-lightbox-overlay img {
+      max-width: 100%; max-height: 100%;
+      border-radius: .6rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, .5);
+    }
+    .img-lightbox-close {
+      position: absolute; top: 1rem; right: 1.1rem;
+      width: 2.4rem; height: 2.4rem; border-radius: 9999px;
+      background: rgba(255, 255, 255, .15); color: #fff; border: none;
+      font-size: 1.3rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
 
