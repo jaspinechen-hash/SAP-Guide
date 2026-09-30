@@ -1,8 +1,11 @@
 <!DOCTYPE html>
+<!-- SAP Guidehub · Designed & maintained by Jaspine · © 2026 -->
 <html lang="zh-Hant" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Jaspine" />
+  <meta name="copyright" content="© 2026 Jaspine" />
   <title>系統操作流程逐步導覽</title>
 
   <!-- Compiled Tailwind v4 + daisyUI v5 (built from src.css; no runtime CSS compilation) -->
@@ -13,22 +16,77 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- Unlayered overrides win over daisyUI's @layer base, so the custom primary + tweaks always apply -->
-  <link rel="stylesheet" href="styles.css?v=2" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 
 <body>
   <header class="topbar">
     <div class="navbar min-h-0 py-2 px-3 sm:px-4">
-      <div class="flex-1 flex items-center gap-3">
+      <div class="topbar-left flex-1 flex items-center gap-3">
         <button class="hamburger btn btn-ghost btn-square btn-sm" id="hamburger" aria-label="開啟選單">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <button class="brand-home" id="brandHome" type="button" aria-label="回到首頁">
           <div class="font-bold text-sm sm:text-base">SAP Guidehub</div>
-          <div class="text-xs opacity-55">SAP · TIPTOP 逐步操作指南</div>
+          <div class="brand-sub text-xs opacity-55">SAP · TIPTOP 逐步操作指南</div>
         </button>
       </div>
-      <div class="flex-none hidden sm:flex items-center gap-2">
+      <div class="topsearch" id="topSearch" role="search">
+        <svg class="topsearch-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="topSearchInput" type="text" placeholder="搜尋流程、步驟、欄位…" autocomplete="off" spellcheck="false" aria-label="搜尋操作流程" aria-expanded="false" aria-controls="topSearchPanel" />
+        <button type="button" class="topsearch-clear" id="topSearchClear" aria-label="清除搜尋">✕</button>
+        <kbd class="topsearch-kbd" title="按 / 或 Ctrl+K 快速搜尋">/</kbd>
+        <div class="topsearch-panel" id="topSearchPanel" role="listbox" aria-label="搜尋結果"></div>
+      </div>
+      <div class="topbar-right flex-none flex items-center gap-2">
+        <!-- TODO：使用者提到之後還要再調整這個「常用連結」漢堡選單的設計/內容，尚未定案，勿視為最終版本 -->
+        <div class="dropdown dropdown-hover">
+          <div tabindex="0" role="button" class="topbar-link" title="常用連結">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span class="hidden sm:inline">常用連結</span>
+            <svg class="topbar-link-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <ul tabindex="0" class="dropdown-content topmenu-panel menu bg-base-100 rounded-box border border-base-300">
+            <li>
+              <a href="https://my439563.s4hana.cloud.sap/ui#Shell-home" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+                <span>前往 SAP 系統</span>
+              </a>
+            </li>
+            <li>
+              <details>
+                <summary>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/></svg>
+                  <span>常用表單</span>
+                </summary>
+                <ul>
+                  <li>
+                    <a href="files/%E5%9C%8B%E5%85%A7%E5%87%BA%E5%B7%AE%E7%94%B3%E8%AB%8B%E6%9A%A8%E6%97%85%E8%B2%BB%E5%A0%B1%E6%94%AF%E5%96%AE_%E6%99%BA%E5%8C%AF%E5%89%B5%E6%96%B0_%E6%9C%88_%E5%90%8D%E5%AD%97%20%E6%A8%A1%E6%9D%BF.xlsx" download="國內出差申請暨旅費報支單_智匯創新_月_名字 模板.xlsx">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      <span>差旅報支Excel範本</span>
+                    </a>
+                  </li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details>
+                <summary>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 4"/><path d="M12 17h.01"/></svg>
+                  <span>常用參考資料</span>
+                </summary>
+                <ul>
+                  <li>
+                    <a href="images/expense-claim/tax-code-table.png" id="taxCodeRefLink">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <span>稅碼對照表</span>
+                    </a>
+                  </li>
+                </ul>
+              </details>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </header>
@@ -39,11 +97,14 @@
       <main id="content"></main>
       <footer class="text-center text-xs opacity-50 pb-8 px-4">
         <span class="hidden sm:inline" id="stepHint">使用 ← / → 切換步驟。</span>
+        <div class="site-credit">© 2026 SAP Guidehub · Designed &amp; maintained by Jaspine</div>
       </footer>
     </div>
   </div>
 
   <div class="backdrop" id="backdrop"></div>
+  <!-- 僅列印／另存 PDF 時顯示的頁尾署名，每一頁底部都會出現 -->
+  <div class="print-credit" aria-hidden="true">© 2026 SAP Guidehub · Designed &amp; maintained by Jaspine</div>
 
   <!-- Verified procedure content (injected by build step) -->
   <script type="application/json" id="proc-data">
@@ -219,6 +280,7 @@
     "summary": "涵蓋四種請購／請款情境：不需收貨（V）、一般請購（K）、固定資產／列管資產（U）、員工請款報支（Z）。四種情境的操作主幹相同，僅「填寫項目資訊」步驟需依情境分開處理，請於步驟2依實際情況選擇對應按鈕。",
     "menuPath": "我的請購單",
     "prerequisites": [],
+    "examples": [],
     "steps": [
       {
         "title": "開啟「我的請購單」並建立項目",
@@ -275,7 +337,7 @@
             {
               "key": "U",
               "label": "U．固定資產／列管資產（需收貨且列管）",
-              "body": "此情境（例如新竹辦公室網路設備請購）若已確定供應商並取得報價，評價價格與價格單位可直接填入實際金額；若尚未確定供應商，則比照 V 情境一律先填1。若該項目有對應的稅額，需再建立一筆對應的稅額項目，欄位填法比照本項目，物料群組改選「TAX（台灣稅額）」，評價價格則填稅額金額。",
+              "body": "此情境（例如新竹辦公室網路設備請購）若已確定供應商並取得報價，評價價格與價格單位可直接填入實際金額；若尚未確定供應商，則比照 V 情境一律先填1。若該項目有對應的稅額，需再建立一筆對應的稅額項目，欄位填法比照本項目，物料群組改選「TAX（台灣稅額）」，評價價格則填稅額金額，「稅基」填本項目的未稅金額（本項目自身的稅基免填）。",
               "fields": [
                 {
                   "name": "評價價格",
@@ -295,7 +357,7 @@
                 {
                   "name": "憑證資料",
                   "value": "「稅碼」「發票日期」「統一編號」「發票號碼」「付款日期」請購階段先留白",
-                  "note": "這幾欄須待實際完成採購、取得正式發票後才會有資料，請購階段不會有，故先留白；若已取得供應商報價單，則「總金額」與「稅基(稅額)」須依報價金額填寫，非選填"
+                  "note": "這幾欄須待實際完成採購、取得正式發票後才會有資料，請購階段不會有，故先留白；若已取得供應商報價單，則「總金額」須依報價金額填寫，非選填；「稅基」填報價的「未稅金額」，且只在對應的稅額項目填寫，本項目免填"
                 },
                 {
                   "name": "筆數",
@@ -342,7 +404,7 @@
                 {
                   "name": "憑證資料",
                   "value": "「稅碼」「發票日期」「統一編號」「發票號碼」「付款日期」請購階段先留白",
-                  "note": "這幾欄須待實際完成採購、取得正式發票後才會有資料，請購階段不會有，故先留白；若已取得供應商報價單，則「總金額」與「稅基(稅額)」須依報價金額填寫，非選填"
+                  "note": "這幾欄須待實際完成採購、取得正式發票後才會有資料，請購階段不會有，故先留白；若已取得供應商報價單，則「總金額」須依報價金額填寫、「稅基」填報價的「未稅金額」，皆非選填"
                 },
                 {
                   "name": "筆數",
@@ -436,7 +498,7 @@
                 {
                   "name": "評價價格",
                   "value": "填入發票上「未含稅」的價格",
-                  "note": "開窗選擇對應幣別代碼"
+                  "note": "開窗選擇對應幣別代碼；例如高鐵費330元，未稅價格為314，此欄填314"
                 },
                 {
                   "name": "價格單位",
@@ -454,9 +516,9 @@
                   "note": "若為費用類請款於月初報支，日期可填月底"
                 },
                 {
-                  "name": "稅基(稅額)",
-                  "value": "填入發票上之「稅額」",
-                  "note": "若發票未特別寫出，需自行計算後填入"
+                  "name": "稅基",
+                  "value": "免填",
+                  "note": "費用項目不需填寫稅基，僅於下一筆對應的「發票」項目填寫（填未稅金額）"
                 },
                 {
                   "name": "總金額",
@@ -543,7 +605,7 @@
                 },
                 {
                   "title": "填寫發票項目的一般資訊",
-                  "body": "「評價價格」「價格單位」「已請求數量」「交貨日期」這四項基本上與對應的費用項目填寫相同的資訊。「稅碼」需依照稅碼表選填對應之稅碼，下方附有稅碼對照表可參考。",
+                  "body": "「價格單位」「已請求數量」「交貨日期」這三項與對應的費用項目填寫相同的資訊；「評價價格」改填稅額，「稅基」則填費用項目的未稅金額。「稅碼」需依照稅碼表選填對應之稅碼，下方附有稅碼對照表可參考。",
                   "images": [
                     "images/expense-claim/step7-1.jpg",
                     "images/expense-claim/step7-2.png"
@@ -567,7 +629,7 @@
                     {
                       "name": "評價價格",
                       "value": "填入該發票上之「稅額」",
-                      "note": "開窗選對應幣別代碼"
+                      "note": "開窗選對應幣別代碼；若發票未特別寫出，需自行計算後填入。例如高鐵費330元，稅額為16，此欄填16"
                     },
                     {
                       "name": "價格單位",
@@ -605,9 +667,9 @@
                       "note": "高鐵則為憑證上卡號/票號去掉前三碼後的10位數字"
                     },
                     {
-                      "name": "稅基(稅額)",
-                      "value": "填入該發票上之「稅額」",
-                      "note": ""
+                      "name": "稅基",
+                      "value": "填入「未稅金額」（即對應費用項目的評價價格）",
+                      "note": "注意不是填稅額；例如高鐵費330元，未稅金額314、稅額16，此欄填314"
                     },
                     {
                       "name": "總金額",
@@ -699,7 +761,14 @@
         "body": "將另存好的PDF列印出來，即為應交予財務資料的封面，請置於整份文件的第一張，並隨附相關附件與憑證一併繳交。",
         "images": [],
         "fields": [],
-        "tip": "若為差旅報支類別，還需另附一份已填寫、列印並簽名的差旅報支Excel表；文件擺放順序為：封面 → 差旅報支Excel → 其他附件。"
+        "tip": "若為差旅報支類別，還需另附一份已填寫、列印並簽名的差旅報支Excel表；文件擺放順序為：封面 → 差旅報支Excel → 其他附件。",
+        "attachments": [
+          {
+            "url": "files/%E5%9C%8B%E5%85%A7%E5%87%BA%E5%B7%AE%E7%94%B3%E8%AB%8B%E6%9A%A8%E6%97%85%E8%B2%BB%E5%A0%B1%E6%94%AF%E5%96%AE_%E6%99%BA%E5%8C%AF%E5%89%B5%E6%96%B0_%E6%9C%88_%E5%90%8D%E5%AD%97%20%E6%A8%A1%E6%9D%BF.xlsx",
+            "name": "差旅報支Excel範本（.xlsx）",
+            "filename": "國內出差申請暨旅費報支單_智匯創新_月_名字 模板.xlsx"
+          }
+        ]
       }
     ],
     "outcome": "請購單完成電簽核准後，依上述方式列印財務封面，並隨附相關附件、憑證（如為差旅報支，另附已簽名的差旅報支Excel表）繳交財務，即完成此次請購／請款作業。"
@@ -1075,6 +1144,6 @@
 ]
     </script>
 
-  <script src="app.js?v=2" defer></script>
+  <script src="app.js?v=4" defer></script>
 </body>
 </html>

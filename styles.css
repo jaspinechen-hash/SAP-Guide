@@ -1,3 +1,4 @@
+/* SAP Guidehub · Designed & maintained by Jaspine · © 2026 */
     :root, [data-theme="light"] {
       --color-primary: #3559d6;
       --color-primary-content: #ffffff;
@@ -95,6 +96,21 @@
     .gate-helper-desc { font-size: .78rem; opacity: .68; }
     .gate-helper-arrow { flex: 0 0 auto; font-weight: 700; opacity: .45; }
     .gate-or { font-size: .78rem; opacity: .5; margin-bottom: .6rem; }
+
+    /* ---------- 查看範例：整頁層級的入口（涵蓋整個請購／請款流程，不綁定單一情境） ---------- */
+    .gate-examples-trigger { display: flex; justify-content: center; }
+    .gate-examples-btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .82rem; font-weight: 600; color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 8%, var(--color-base-100));
+      border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+      border-radius: .55rem; padding: .38rem .75rem; cursor: pointer;
+      transition: background-color .15s ease, border-color .15s ease;
+    }
+    .gate-examples-btn:hover {
+      background: color-mix(in srgb, var(--color-primary) 14%, var(--color-base-100));
+      border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    }
 
     /* ---------- 完整判斷邏輯圖：弱化為次要的參考連結，不搶主要入口的視覺 ---------- */
     .gate-diagram-ref { background: transparent; box-shadow: none; }
@@ -408,6 +424,7 @@
     }
     .branch-card:hover { transform: scale(1.035); box-shadow: var(--shadow-lift); border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-base-300)); }
     .branch-card:active { transform: scale(.98); }
+    .branch-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
     .branch-card .branch-icon { font-size: 1.5rem; line-height: 1; }
     .branch-card .branch-title { font-weight: 700; font-size: .92rem; }
     .branch-card .branch-desc { font-size: .78rem; opacity: .68; line-height: 1.4; }
@@ -593,3 +610,190 @@
       cursor: pointer;
     }
 
+    /* ---------- 頂欄常用連結選單（SAP 系統入口、常用表單下載）：柔和的小標籤觸發器，滑鼠移入即展開 ---------- */
+    .topbar-link {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .82rem; font-weight: 600; color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 8%, var(--color-base-100));
+      border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+      border-radius: .55rem; padding: .38rem .65rem; text-decoration: none;
+      cursor: pointer; user-select: none;
+      transition: background-color .15s ease, border-color .15s ease;
+    }
+    .topbar-link:hover {
+      background: color-mix(in srgb, var(--color-primary) 14%, var(--color-base-100));
+      border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    }
+    .topbar-link svg { flex: 0 0 auto; }
+    .topbar-link-caret { transition: transform .15s ease; opacity: .7; }
+    .dropdown:hover .topbar-link-caret,
+    .dropdown:focus-within .topbar-link-caret { transform: rotate(180deg); }
+    /* 面板本身：固定靠右對齊觸發按鈕（不依賴 dropdown-end，避免預編譯的 vendor.css 未包含該變化樣式），
+       並自訂寬度與陰影，因為 w-56 / shadow-lg 這類 utility class 同樣未被預編譯進 vendor.css。 */
+    .topmenu-panel {
+      position: absolute; right: 0; left: auto; top: 100%;
+      min-width: 13rem; max-width: min(16rem, calc(100vw - 1.6rem));
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .14), 0 2px 8px rgba(15, 23, 42, .06);
+    }
+    .topmenu-panel a,
+    .topmenu-panel summary { font-size: .88rem; }
+    .topmenu-panel svg { flex: 0 0 auto; opacity: .75; }
+    .topmenu-panel details ul { margin-top: .15rem; }
+
+    /* ---------- 填寫範例字卡：一次一張、可切換上一張/下一張，尚未提供範例圖時顯示建置中佔位卡 ---------- */
+    .example-modal-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(15, 23, 42, .6);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.2rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity .18s ease;
+    }
+    .example-modal-overlay.show { opacity: 1; pointer-events: auto; }
+    .example-modal {
+      position: relative; width: 100%; max-width: 30rem;
+      background: var(--color-base-100); border-radius: 1rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .25);
+      padding: 1.1rem 1.2rem 1.3rem;
+      display: flex; flex-direction: column; gap: .7rem;
+    }
+    .example-modal-close {
+      position: absolute; top: .7rem; right: .7rem;
+      width: 2rem; height: 2rem; border-radius: 9999px;
+      background: color-mix(in srgb, var(--color-base-content) 8%, transparent);
+      border: none; font-size: 1.05rem; line-height: 1; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .example-modal-header {
+      display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
+      padding-right: 2rem;
+    }
+    .example-modal-title { font-weight: 700; font-size: .95rem; }
+    .example-modal-counter { font-size: .78rem; opacity: .6; flex: 0 0 auto; }
+    .example-modal-body {
+      border: 1px solid var(--color-base-300); border-radius: .7rem; overflow: hidden;
+      background: var(--color-base-200, var(--color-base-100));
+      min-height: 8rem;
+      display: flex; flex-direction: column;
+    }
+    .example-modal-body img { width: 100%; display: block; }
+    .example-modal-caption { font-size: .8rem; opacity: .7; padding: .6rem .8rem; }
+    .example-modal-pending {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: .4rem; padding: 2rem 1rem; text-align: center; opacity: .7; font-size: .85rem;
+    }
+    .example-modal-pending span { font-size: 1.4rem; }
+    .example-modal-nav { display: flex; justify-content: space-between; gap: .6rem; }
+    .example-modal-prev, .example-modal-next {
+      font-size: .82rem; font-weight: 600; color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 8%, var(--color-base-100));
+      border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+      border-radius: .55rem; padding: .38rem .7rem; cursor: pointer;
+    }
+    .example-modal-prev:hover, .example-modal-next:hover {
+      background: color-mix(in srgb, var(--color-primary) 14%, var(--color-base-100));
+    }
+    .example-modal-prev:disabled, .example-modal-next:disabled { opacity: .35; cursor: default; }
+
+    /* ---------- 頂欄搜尋欄：置中於品牌名稱與「常用連結」之間，結果以下拉面板呈現 ---------- */
+    .topbar-left { flex: 1 1 0; min-width: 0; }
+    .topbar-right { flex: 1 1 0; justify-content: flex-end; }
+    .topsearch {
+      position: relative; flex: 0 1 28rem; min-width: 0; margin: 0 .75rem;
+      display: flex; align-items: center;
+      background: var(--color-base-200); border: 1px solid var(--color-base-300);
+      border-radius: .65rem; height: 2.2rem; padding: 0 .55rem 0 .65rem; gap: .45rem;
+      transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+    .topsearch:focus-within {
+      background: var(--color-base-100);
+      border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+    }
+    .topsearch-icon { flex: 0 0 auto; opacity: .5; }
+    .topsearch input {
+      flex: 1 1 auto; min-width: 0; height: 100%; border: none; outline: none; background: transparent;
+      font-size: .88rem; color: inherit; font-family: inherit;
+    }
+    .topsearch input::placeholder { color: #1c2433; opacity: .42; }
+    .topsearch-kbd {
+      flex: 0 0 auto; font-family: ui-monospace, monospace; font-size: .7rem; line-height: 1;
+      padding: .22rem .4rem; border-radius: .35rem; border: 1px solid var(--color-base-300);
+      background: var(--color-base-100); opacity: .6;
+    }
+    .topsearch-clear {
+      display: none; flex: 0 0 auto; width: 1.3rem; height: 1.3rem; border-radius: 9999px; border: none;
+      background: var(--color-base-300); color: inherit; font-size: .62rem; line-height: 1; cursor: pointer; opacity: .7;
+    }
+    .topsearch-clear:hover { opacity: 1; }
+    .topsearch.has-value .topsearch-clear { display: inline-flex; align-items: center; justify-content: center; }
+    .topsearch.has-value .topsearch-kbd,
+    .topsearch:focus-within .topsearch-kbd { display: none; }
+
+    .topsearch-panel {
+      display: none; position: absolute; top: calc(100% + .45rem); left: 50%; transform: translateX(-50%);
+      width: min(34rem, calc(100vw - 1.5rem)); max-height: min(70vh, 34rem); overflow-y: auto;
+      background: var(--color-base-100); border: 1px solid var(--color-base-300); border-radius: .9rem;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, .16), 0 2px 8px rgba(15, 23, 42, .06);
+      padding: .4rem; z-index: 80;
+    }
+    .topsearch-panel.show { display: block; }
+    .search-count { font-size: .7rem; font-weight: 600; opacity: .5; padding: .3rem .6rem .4rem; }
+    .search-empty { font-size: .85rem; opacity: .65; padding: 1rem .8rem; text-align: center; line-height: 1.6; }
+    .search-empty-eg { font-size: .78rem; opacity: .8; }
+    .search-item {
+      display: flex; flex-direction: column; gap: .18rem; width: 100%; text-align: left;
+      background: none; border: none; border-radius: .6rem; padding: .55rem .65rem; cursor: pointer; color: inherit; font-family: inherit;
+    }
+    .search-item:hover, .search-item.active { background: color-mix(in srgb, var(--color-primary) 8%, var(--color-base-100)); }
+    .search-item + .search-item { margin-top: .1rem; }
+    .search-item-top { display: flex; align-items: center; gap: .45rem; min-width: 0; font-size: .74rem; }
+    .search-dot { flex: 0 0 auto; width: .5rem; height: .5rem; border-radius: 9999px; background: var(--color-primary); opacity: .75; }
+    .search-dot[data-tone="sky"] { background: var(--accent-sky-strong); opacity: 1; }
+    .search-dot[data-tone="mint"] { background: var(--accent-mint-strong); opacity: 1; }
+    .search-dot[data-tone="peach"] { background: var(--accent-peach-strong); opacity: 1; }
+    .search-dot[data-tone="lavender"] { background: var(--accent-lavender-strong); opacity: 1; }
+    .search-dot[data-tone="rose"] { background: var(--accent-rose-strong); opacity: 1; }
+    .search-dot[data-tone="gold"] { background: var(--accent-gold-strong); opacity: 1; }
+    .search-proc { font-weight: 700; white-space: nowrap; }
+    .search-loc { opacity: .55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .search-item-title { font-size: .88rem; font-weight: 600; line-height: 1.35; }
+    .search-snippet { font-size: .78rem; opacity: .72; line-height: 1.5; }
+    .search-item mark, .search-mark {
+      background: color-mix(in srgb, var(--accent-gold-strong) 45%, transparent); color: inherit;
+      border-radius: .2rem; padding: 0 .08em;
+    }
+    .search-flash { animation: searchFlash 1.8s ease; }
+    @keyframes searchFlash {
+      0%, 35% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-gold-strong) 60%, transparent); }
+      100% { box-shadow: 0 0 0 3px transparent; }
+    }
+    .search-jump-note {
+      width: 100%; max-width: 34rem; margin: 0 auto 1rem; padding: .6rem .8rem; font-size: .82rem; line-height: 1.5;
+      border-radius: .7rem; text-align: left;
+      background: color-mix(in srgb, var(--accent-gold-strong) 16%, var(--color-base-100));
+      border: 1px solid color-mix(in srgb, var(--accent-gold-strong) 45%, transparent);
+    }
+
+    @media (max-width: 639px) {
+      .topbar-left, .topbar-right { flex: 0 0 auto; }
+      .brand-sub { display: none; }
+      .topsearch { flex: 1 1 auto; margin: 0 .5rem; }
+      .topsearch-kbd { display: none; }
+      .topsearch-panel { position: fixed; top: 3.6rem; left: .75rem; right: .75rem; width: auto; transform: none; }
+    }
+
+    /* ---------- 頁尾署名：低調的小字，放在頁尾「切換步驟」提示下方 ---------- */
+    .site-credit { margin-top: .5rem; font-size: .68rem; letter-spacing: .02em; opacity: .75; }
+    .print-credit { display: none; }
+
+    /* ---------- 列印／另存 PDF：每頁底部帶出同一行署名 ---------- */
+    @media print {
+      .site-credit { display: none; }
+      .print-credit {
+        display: block; position: fixed; left: 0; right: 0; bottom: 0;
+        text-align: center; font-size: 7.5pt; color: #8a8f99; letter-spacing: .02em;
+        background: #fff; padding-top: 2pt;
+      }
+      body { padding-bottom: 14pt; }
+    }

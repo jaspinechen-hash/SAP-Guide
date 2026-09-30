@@ -1,3 +1,4 @@
+/* SAP Guidehub · Designed & maintained by Jaspine · © 2026 */
     (function () {
       "use strict";
       var DATA = [];
@@ -278,7 +279,15 @@
           }).join("") + "</div>";
         }
 
-        h += '<div class="collapse collapse-arrow gate-diagram-ref mt-4">' +
+        // 「查看範例」放在整頁層級（不綁定特定情境卡片），因為範例會涵蓋整個請購／請款流程，
+        // 不是只有 Z．員工請款報支才有。
+        if (p.examples) {
+          h += '<div class="gate-examples-trigger text-sm text-center mt-3">' +
+            '<button type="button" id="gateExamplesBtn" class="gate-examples-btn">📎 查看範例</button>' +
+            "</div>";
+        }
+
+        h += '<div class="collapse collapse-arrow gate-diagram-ref mt-3">' +
           '<input type="checkbox" />' +
           '<div class="collapse-title text-sm">查看完整判斷邏輯圖</div>' +
           '<div class="collapse-content"><div class="rt-diagram-wrap">' + GATE_DIAGRAM_SVG + "</div></div></div>";
@@ -296,6 +305,10 @@
             gateQMode = false; resetAsk();
             renderWizard();
           });
+        });
+        var examplesBtn = document.getElementById("gateExamplesBtn");
+        if (examplesBtn) examplesBtn.addEventListener("click", function () {
+          openMediaModal("填寫範例", p.examples);
         });
         var askBtn = document.getElementById("gateAskBtn");
         if (askBtn) askBtn.addEventListener("click", function () {
@@ -404,7 +417,7 @@
         if (showShot) h += renderShot(p, s, idx);
         if (s.attachments && s.attachments.length) {
           h += '<div class="flex flex-col gap-2">' + s.attachments.map(function (a) {
-            return '<a href="' + a.url + '" download class="attachment-chip">' +
+            return '<a href="' + a.url + '" download="' + esc(a.filename || a.name) + '" class="attachment-chip">' +
               '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
               '<span>' + esc(a.name) + "</span></a>";
           }).join("") + "</div>";
@@ -443,8 +456,15 @@
       function renderWizard() {
         var p = DATA[active];
         var bt = findBranchTemplate(p);
+        // 從搜尋跳過來、目標在「選擇情境之後」的共用步驟：選好情境後自動帶到該步驟
+        if (pendingJump && pendingJump.proc === active && bt && branchState[bt.step.branch.stateKey]) {
+          stepIndex = tailEffIndex(p, pendingJump.raw);
+          pendingJump = null;
+        }
         if (bt && stepIndex === bt.index && !branchState[bt.step.branch.stateKey]) {
           renderGate(p, bt.step, bt.index);
+          var gs = pendingJump && pendingJump.proc === active && document.querySelector("#wizard .gate-screen");
+          if (gs) gs.insertAdjacentHTML("afterbegin", '<div class="search-jump-note">🔎 你搜尋的「' + esc(pendingJump.title) + '」位於選擇情境之後，請先選擇情境，選好後會自動帶你到該步驟。</div>');
           return;
         }
         var eff = getEffectiveSteps(p);
@@ -455,6 +475,7 @@
         var h = railHtml(eff) + renderStepCard(p, eff[stepIndex], stepIndex) + controlsHtml(eff);
         // 結果區塊已依需求移除，不再顯示
         w.innerHTML = h;
+        if (pendingHighlight) { var ph = pendingHighlight; pendingHighlight = null; highlightIn(w, ph, true); }
 
         w.querySelectorAll(".wiz-dot").forEach(function (d) {
           d.addEventListener("click", function () { setStep(+d.dataset.s); });
@@ -483,7 +504,7 @@
           content.innerHTML = '<div class="landing">' +
             '<div class="landing-icon">📘</div>' +
             "<h1>歡迎使用系統操作流程逐步導覽</h1>" +
-            "<p>請從左側選單選擇一個系統或項目，開始查看操作教學。</p>" +
+            "<p>請從左側選單選擇一個系統或項目，開始查看操作教學；也可以用上方搜尋欄，直接搜尋步驟或欄位名稱。</p>" +
             "</div>";
           return;
         }
@@ -582,6 +603,7 @@
       function select(i) {
         if (i < 0 || i >= DATA.length) return;
         active = i; stepIndex = 0;
+        pendingJump = null; pendingHighlight = null;
         gateQMode = false; gateQTrail = [GATE_TREE]; gateQAnswers = []; gatePendingAns = null;
         branchState = {};
         buildSidebar();
@@ -592,13 +614,310 @@
 
       function goHome() {
         active = -1; stepIndex = 0;
+        pendingJump = null; pendingHighlight = null;
         buildSidebar();
         render();
         closeSidebar();
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
+
+      // ---------- 全站搜尋（頂欄搜尋欄）----------
+      // 搜尋範圍：流程名稱／分類／摘要／開始前須知、每個步驟的標題、說明、欄位（名稱＋填法＋備註）與提示，
+      // 以及請購情境（V／K／U／Z）各自的欄位與延伸步驟、頂欄「常用連結」裡的參考資料。
+      // 點選結果會直接跳到該流程的對應步驟（必要時自動帶入情境），並在畫面上以螢光標出搜尋字詞。
+      // 資料來源就是上方的 DATA，之後新增流程或修改內容，搜尋會自動涵蓋，不需另外維護。
+      var searchIndex = [];
+
+      function plain(t) { return String(t == null ? "" : t).replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim(); }
+      function fieldParts(fields) {
+        return (fields || []).map(function (f) {
+          return { text: "【" + plain(f.name) + "】" + plain(f.value) + (f.note ? "：" + plain(f.note) : ""), w: 3 };
+        });
+      }
+      function stepParts(s) {
+        var parts = [{ text: plain(s.title), w: 5, isTitle: true }];
+        if (s.body) parts.push({ text: plain(s.body), w: 2 });
+        parts = parts.concat(fieldParts(s.fields));
+        if (s.tip) parts.push({ text: plain(s.tip), w: 1 });
+        return parts;
+      }
+      function buildSearchIndex() {
+        searchIndex = [];
+        DATA.forEach(function (p, i) {
+          var procParts = [{ text: plain(p.name), w: 6, isTitle: true }];
+          if (p.code) procParts.push({ text: plain(p.code), w: 6 });
+          if (p.category) procParts.push({ text: plain(p.category), w: 2 });
+          if (p.menuPath) procParts.push({ text: plain(p.menuPath), w: 2 });
+          if (p.summary) procParts.push({ text: plain(p.summary), w: 2 });
+          (p.prerequisites || []).forEach(function (x) { procParts.push({ text: plain(x), w: 1 }); });
+          if (p.outcome) procParts.push({ text: plain(p.outcome), w: 1 });
+          searchIndex.push({ kind: "proc", i: i, title: p.name, loc: p.category || p.group || "", parts: procParts });
+
+          var bt = null;
+          (p.steps || []).forEach(function (s, k) {
+            if (s.branch) {
+              bt = { index: k, step: s };
+              var baseParts = stepParts(s);
+              if (s.branch.prompt) baseParts.push({ text: plain(s.branch.prompt), w: 1 });
+              searchIndex.push({ kind: "base", i: i, raw: k, title: s.title, loc: "步驟 " + (k + 1) + " · 各情境共用欄位", parts: baseParts });
+              s.branch.options.forEach(function (o) {
+                var optName = o.title || o.label;
+                var oParts = [{ text: plain(o.label || o.title), w: 5, isTitle: true }];
+                if (o.desc) oParts.push({ text: plain(o.desc), w: 2 });
+                if (o.body) oParts.push({ text: plain(o.body), w: 2 });
+                oParts = oParts.concat(fieldParts(o.fields));
+                if (o.tip) oParts.push({ text: plain(o.tip), w: 1 });
+                searchIndex.push({ kind: "opt", i: i, raw: k, key: o.key, stateKey: s.branch.stateKey, title: s.title,
+                  loc: "步驟 " + (k + 1) + " · " + optName, tone: o.tone, parts: oParts });
+                (o.extraSteps || []).forEach(function (x, j) {
+                  searchIndex.push({ kind: "extra", i: i, raw: k, extra: j, key: o.key, stateKey: s.branch.stateKey, title: x.title,
+                    loc: "步驟 " + (k + 2 + j) + " · " + optName, tone: o.tone, parts: stepParts(x) });
+                });
+              });
+            } else {
+              searchIndex.push({ kind: bt ? "tail" : "step", i: i, raw: k, title: s.title,
+                loc: bt ? "選擇情境後 · 各情境共用" : "步驟 " + (k + 1), parts: stepParts(s) });
+            }
+          });
+        });
+        // 頂欄「常用連結」裡的項目（稅碼對照表、差旅報支Excel範本、SAP 系統入口…），直接沿用選單本身的連結
+        document.querySelectorAll(".topmenu-panel a").forEach(function (a) {
+          var name = plain(a.textContent);
+          var sec = a.closest("details");
+          var secName = sec ? plain(sec.querySelector("summary").textContent) : "常用連結";
+          searchIndex.push({ kind: "ref", el: a, title: name, loc: secName, parts: [{ text: name, w: 6, isTitle: true }, { text: secName, w: 1 }] });
+        });
+        searchIndex.forEach(function (e) {
+          e.hay = e.parts.map(function (x) { return x.text.toLowerCase(); });
+        });
+      }
+
+      function splitTerms(q) {
+        return String(q || "").toLowerCase().split(/[\s,，、]+/).filter(Boolean);
+      }
+      function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+      function termsRegex(terms) {
+        var sorted = terms.slice().sort(function (a, b) { return b.length - a.length; });
+        return new RegExp("(" + sorted.map(escRe).join("|") + ")", "gi");
+      }
+      function hl(text, terms) {
+        var re = termsRegex(terms);
+        return String(text).split(re).map(function (seg, n) {
+          return n % 2 ? "<mark>" + esc(seg) + "</mark>" : esc(seg);
+        }).join("");
+      }
+
+      function runSearch(q) {
+        var terms = splitTerms(q);
+        if (!terms.length) return [];
+        var out = [];
+        searchIndex.forEach(function (e, order) {
+          var score = 0;
+          for (var t = 0; t < terms.length; t++) {
+            var best = 0;
+            for (var n = 0; n < e.hay.length; n++) {
+              if (e.hay[n].indexOf(terms[t]) !== -1 && e.parts[n].w > best) best = e.parts[n].w;
+            }
+            if (!best) return; // 每個關鍵字都要出現（AND）
+            score += best;
+          }
+          out.push({ e: e, score: score, order: order });
+        });
+        out.sort(function (a, b) { return b.score - a.score || a.order - b.order; });
+        return out.slice(0, 40);
+      }
+
+      function snippetFor(e, terms) {
+        // 優先從「非標題」的內容挑第一段有命中的文字當摘要；只有標題命中時，就顯示該段的說明開頭
+        var pick = null, n;
+        for (n = 0; n < e.parts.length; n++) {
+          if (e.parts[n].isTitle) continue;
+          var low = e.hay[n];
+          if (terms.some(function (t) { return low.indexOf(t) !== -1; })) { pick = e.parts[n].text; break; }
+        }
+        if (!pick) {
+          for (n = 0; n < e.parts.length; n++) if (!e.parts[n].isTitle) { pick = e.parts[n].text; break; }
+          if (!pick) return "";
+          return esc(pick.length > 60 ? pick.slice(0, 60) + "…" : pick);
+        }
+        var lowPick = pick.toLowerCase(), pos = Infinity;
+        terms.forEach(function (t) { var x = lowPick.indexOf(t); if (x !== -1 && x < pos) pos = x; });
+        var start = Math.max(0, pos - 22), end = Math.min(pick.length, start + 72);
+        return (start > 0 ? "…" : "") + hl(pick.slice(start, end), terms) + (end < pick.length ? "…" : "");
+      }
+
+      // 跳轉後在畫面上把搜尋字詞標起來，並捲到第一個命中的位置
+      var pendingHighlight = null;
+      var pendingJump = null; // 命中「選擇情境之後」的共用步驟時，先停在情境選擇頁，選好情境後再自動帶過去
+      function highlightIn(root, terms, reveal) {
+        if (!root || !terms || !terms.length) return;
+        var re = termsRegex(terms);
+        var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+          acceptNode: function (node) {
+            var par = node.parentNode;
+            if (!node.nodeValue.trim() || !par || par.closest("script,style,svg,mark,.wiz-rail,.wiz-controls,button")) return NodeFilter.FILTER_REJECT;
+            re.lastIndex = 0;
+            return re.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          }
+        });
+        var nodes = [], nd;
+        while ((nd = walker.nextNode())) nodes.push(nd);
+        var first = null;
+        nodes.forEach(function (node) {
+          var frag = document.createDocumentFragment();
+          node.nodeValue.split(re).forEach(function (seg, n) {
+            if (!seg) return;
+            if (n % 2) {
+              var m = document.createElement("mark");
+              m.className = "search-mark";
+              m.textContent = seg;
+              frag.appendChild(m);
+              if (!first) first = m;
+            } else frag.appendChild(document.createTextNode(seg));
+          });
+          node.parentNode.replaceChild(frag, node);
+        });
+        if (first && reveal) {
+          var card = first.closest(".field-card, .tip");
+          if (card) {
+            card.classList.add("search-flash");
+            setTimeout(function () { card.classList.remove("search-flash"); }, 1800);
+          }
+          setTimeout(function () { first.scrollIntoView({ behavior: "smooth", block: "center" }); }, 30);
+        }
+      }
+
+      function tailEffIndex(p, raw) {
+        var bt = findBranchTemplate(p);
+        var opt = bt.step.branch.options.filter(function (o) { return o.key === branchState[bt.step.branch.stateKey]; })[0];
+        var extras = (opt && opt.extraSteps) ? opt.extraSteps.length : 0;
+        return bt.index + 1 + extras + (raw - bt.index - 1);
+      }
+
+      function goToHit(e, terms) {
+        if (e.kind === "ref") { e.el.click(); return; }
+        select(e.i);
+        var p = DATA[e.i];
+        if (e.kind === "proc") { highlightIn(content, terms, false); return; }
+        if (e.kind === "step" || e.kind === "base") {
+          stepIndex = e.raw;
+        } else if (e.kind === "opt" || e.kind === "extra") {
+          branchState[e.stateKey] = e.key;
+          stepIndex = e.raw + (e.kind === "extra" ? 1 + e.extra : 0);
+        } else if (e.kind === "tail") {
+          stepIndex = findBranchTemplate(p).index;
+          pendingJump = { proc: e.i, raw: e.raw, title: e.title };
+        }
+        pendingHighlight = terms;
+        renderWizard();
+        var w = document.getElementById("wizard");
+        if (w && !document.querySelector("#wizard .search-mark")) w.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function initSearch() {
+        var box = document.getElementById("topSearch");
+        var input = document.getElementById("topSearchInput");
+        var panel = document.getElementById("topSearchPanel");
+        var clearBtn = document.getElementById("topSearchClear");
+        if (!box || !input || !panel) return;
+        buildSearchIndex();
+        // 手機寬度空間較窄，提示文字縮短，避免被截斷
+        var narrowMq = window.matchMedia("(max-width: 639px)");
+        function syncPlaceholder() { input.placeholder = narrowMq.matches ? "搜尋…" : "搜尋流程、步驟、欄位…"; }
+        syncPlaceholder();
+        if (narrowMq.addEventListener) narrowMq.addEventListener("change", syncPlaceholder);
+        var results = [], activeRes = -1, terms = [];
+
+        function open() { panel.classList.add("show"); input.setAttribute("aria-expanded", "true"); }
+        function close() { panel.classList.remove("show"); input.setAttribute("aria-expanded", "false"); activeRes = -1; }
+        function paint() {
+          var q = input.value.trim();
+          box.classList.toggle("has-value", !!input.value);
+          if (!q) {
+            panel.innerHTML = '<div class="search-empty">可搜尋流程名稱、步驟、欄位名稱或填寫說明<br><span class="search-empty-eg">例如：稅基、發票號碼、固定資產、成本中心</span></div>';
+            return;
+          }
+          terms = splitTerms(q);
+          results = runSearch(q);
+          if (!results.length) {
+            panel.innerHTML = '<div class="search-empty">找不到符合「' + esc(q) + '」的內容</div>';
+            return;
+          }
+          var h = '<div class="search-count">共 ' + results.length + (results.length >= 40 ? "+" : "") + " 筆結果</div>";
+          h += results.map(function (r, n) {
+            var e = r.e;
+            var p = e.kind === "ref" ? null : DATA[e.i];
+            var tone = e.kind === "ref" ? "" : (e.tone || toneFor(p));
+            var head = e.kind === "ref" ? "常用連結" : p.name;
+            var showTitle = e.kind !== "proc" && e.kind !== "ref";
+            return '<button type="button" class="search-item' + (n === activeRes ? " active" : "") + '" data-n="' + n + '" role="option">' +
+              '<span class="search-item-top"><span class="search-dot" data-tone="' + esc(tone) + '"></span>' +
+              '<span class="search-proc">' + (e.kind === "proc" || e.kind === "ref" ? hl(e.title, terms) : esc(head)) + "</span>" +
+              (e.loc ? '<span class="search-loc">' + esc(e.loc) + "</span>" : "") + "</span>" +
+              (showTitle ? '<span class="search-item-title">' + hl(e.title, terms) + "</span>" : "") +
+              (e.kind === "ref" ? "" : '<span class="search-snippet">' + snippetFor(e, terms) + "</span>") +
+              "</button>";
+          }).join("");
+          panel.innerHTML = h;
+        }
+        function setActive(n) {
+          var items = panel.querySelectorAll(".search-item");
+          if (!items.length) return;
+          activeRes = (n + items.length) % items.length;
+          items.forEach(function (it, k) { it.classList.toggle("active", k === activeRes); });
+          items[activeRes].scrollIntoView({ block: "nearest" });
+        }
+        function choose(n) {
+          var r = results[n];
+          if (!r) return;
+          close();
+          input.blur();
+          goToHit(r.e, terms);
+        }
+
+        input.addEventListener("input", function () { activeRes = -1; paint(); open(); });
+        input.addEventListener("focus", function () { paint(); open(); });
+        input.addEventListener("keydown", function (ev) {
+          if (ev.key === "ArrowDown") { ev.preventDefault(); open(); setActive(activeRes + 1); }
+          else if (ev.key === "ArrowUp") { ev.preventDefault(); setActive(activeRes - 1); }
+          else if (ev.key === "Enter") { ev.preventDefault(); choose(activeRes >= 0 ? activeRes : 0); }
+          else if (ev.key === "Escape") {
+            ev.stopPropagation();
+            if (input.value) { input.value = ""; paint(); } else { close(); input.blur(); }
+          }
+        });
+        // 用 pointerdown 先攔截，避免點結果時輸入框先失焦把面板關掉
+        panel.addEventListener("pointerdown", function (ev) { ev.preventDefault(); });
+        panel.addEventListener("click", function (ev) {
+          var it = ev.target.closest(".search-item");
+          if (it) choose(+it.dataset.n);
+        });
+        input.addEventListener("blur", function () { setTimeout(close, 120); });
+        if (clearBtn) {
+          clearBtn.addEventListener("pointerdown", function (ev) { ev.preventDefault(); });
+          clearBtn.addEventListener("click", function () { input.value = ""; paint(); input.focus(); });
+        }
+        // 快速鍵：「/」或 Ctrl／⌘＋K 聚焦搜尋欄
+        document.addEventListener("keydown", function (ev) {
+          var tag = (ev.target && ev.target.tagName) || "";
+          var typing = tag === "INPUT" || tag === "TEXTAREA" || (ev.target && ev.target.isContentEditable);
+          if ((ev.key === "k" || ev.key === "K") && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); input.focus(); input.select(); }
+          else if (ev.key === "/" && !typing && !ev.ctrlKey && !ev.metaKey && !ev.altKey) { ev.preventDefault(); input.focus(); input.select(); }
+        });
+      }
+
+      initSearch();
+
       document.getElementById("brandHome").addEventListener("click", goHome);
+
+      // 常用連結選單裡的稅碼對照表：改成跟「查看範例」共用同一套彈窗，不再另開分頁；
+      // 之後若有其他參考資料要加進「常用參考資料」，都比照這裡直接呼叫 openMediaModal。
+      var taxCodeRefLink = document.getElementById("taxCodeRefLink");
+      if (taxCodeRefLink) taxCodeRefLink.addEventListener("click", function (e) {
+        e.preventDefault();
+        openMediaModal("稅碼對照表", [{ src: taxCodeRefLink.getAttribute("href"), caption: "" }]);
+      });
 
       document.getElementById("hamburger").addEventListener("click", function () {
         sidebar.classList.toggle("open");
@@ -620,6 +939,129 @@
           else if (active > 0) select(active - 1);
         }
       });
+
+      // ---------- 通用的「參考媒體」彈出視窗：以字卡（一次一張、可切換上一張/下一張）呈現圖片 ----------
+      // 通用元件，不只給「範例」用——稅碼對照表等其他參考資料，之後也都走同一套彈窗，
+      // 不用另開分頁；只有 1 張圖時會自動隱藏上一張/下一張按鈕。尚未提供圖片時顯示「建置中」佔位卡。
+      var mediaModal, mediaModalImg, mediaModalCaption, mediaModalCounter,
+        mediaModalPrev, mediaModalNext, mediaModalPending, mediaModalTitle;
+      var mediaModalCards = [], mediaModalIndex = 0;
+
+      function ensureMediaModal() {
+        if (mediaModal) return mediaModal;
+        mediaModal = document.createElement("div");
+        mediaModal.className = "example-modal-overlay";
+        mediaModal.setAttribute("role", "dialog");
+        mediaModal.setAttribute("aria-modal", "true");
+        mediaModal.setAttribute("aria-label", "參考資料");
+
+        var card = document.createElement("div");
+        card.className = "example-modal";
+
+        var closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "example-modal-close";
+        closeBtn.setAttribute("aria-label", "關閉");
+        closeBtn.textContent = "✕";
+
+        var header = document.createElement("div");
+        header.className = "example-modal-header";
+        mediaModalTitle = document.createElement("span");
+        mediaModalTitle.className = "example-modal-title";
+        mediaModalCounter = document.createElement("span");
+        mediaModalCounter.className = "example-modal-counter";
+        header.appendChild(mediaModalTitle);
+        header.appendChild(mediaModalCounter);
+
+        var body = document.createElement("div");
+        body.className = "example-modal-body";
+        mediaModalImg = document.createElement("img");
+        mediaModalCaption = document.createElement("p");
+        mediaModalCaption.className = "example-modal-caption";
+        mediaModalPending = document.createElement("div");
+        mediaModalPending.className = "example-modal-pending";
+        mediaModalPending.innerHTML = "<span>🚧</span><p>內容尚未提供，之後補上</p>";
+        body.appendChild(mediaModalImg);
+        body.appendChild(mediaModalCaption);
+        body.appendChild(mediaModalPending);
+
+        var nav = document.createElement("div");
+        nav.className = "example-modal-nav";
+        mediaModalPrev = document.createElement("button");
+        mediaModalPrev.type = "button";
+        mediaModalPrev.className = "example-modal-prev";
+        mediaModalPrev.setAttribute("aria-label", "上一張");
+        mediaModalPrev.textContent = "← 上一張";
+        mediaModalNext = document.createElement("button");
+        mediaModalNext.type = "button";
+        mediaModalNext.className = "example-modal-next";
+        mediaModalNext.setAttribute("aria-label", "下一張");
+        mediaModalNext.textContent = "下一張 →";
+        nav.appendChild(mediaModalPrev);
+        nav.appendChild(mediaModalNext);
+
+        card.appendChild(closeBtn);
+        card.appendChild(header);
+        card.appendChild(body);
+        card.appendChild(nav);
+        mediaModal.appendChild(card);
+        document.body.appendChild(mediaModal);
+
+        function close() { mediaModal.classList.remove("show"); }
+        mediaModal.addEventListener("click", close);
+        card.addEventListener("click", function (e) { e.stopPropagation(); });
+        closeBtn.addEventListener("click", close);
+        document.addEventListener("keydown", function (e) {
+          if (!mediaModal.classList.contains("show")) return;
+          if (e.key === "Escape") close();
+          else if (e.key === "ArrowRight") stepMediaModal(1);
+          else if (e.key === "ArrowLeft") stepMediaModal(-1);
+        });
+        mediaModalPrev.addEventListener("click", function () { stepMediaModal(-1); });
+        mediaModalNext.addEventListener("click", function () { stepMediaModal(1); });
+
+        return mediaModal;
+      }
+
+      function stepMediaModal(dir) {
+        var next = mediaModalIndex + dir;
+        if (next < 0 || next > mediaModalCards.length - 1) return;
+        mediaModalIndex = next;
+        renderMediaModalCard();
+      }
+
+      function renderMediaModalCard() {
+        var hasCards = mediaModalCards.length > 0;
+        mediaModalImg.style.display = hasCards ? "" : "none";
+        mediaModalCaption.style.display = hasCards ? "" : "none";
+        mediaModalPending.style.display = hasCards ? "none" : "";
+        mediaModalPrev.style.visibility = mediaModalCards.length > 1 ? "visible" : "hidden";
+        mediaModalNext.style.visibility = mediaModalCards.length > 1 ? "visible" : "hidden";
+        if (!hasCards) {
+          mediaModalCounter.textContent = "";
+          return;
+        }
+        var c = mediaModalCards[mediaModalIndex];
+        var src = typeof c === "string" ? c : c.src;
+        var caption = typeof c === "object" && c ? c.caption : "";
+        mediaModalImg.src = src;
+        mediaModalImg.alt = caption || "";
+        mediaModalCaption.textContent = caption || "";
+        mediaModalCaption.style.display = caption ? "" : "none";
+        mediaModalCounter.textContent = mediaModalCards.length > 1 ? (mediaModalIndex + 1) + " / " + mediaModalCards.length : "";
+        mediaModalPrev.disabled = mediaModalIndex === 0;
+        mediaModalNext.disabled = mediaModalIndex === mediaModalCards.length - 1;
+      }
+
+      // title: 顯示在視窗標題；items: 圖片陣列（{src, caption} 或純字串），可為空陣列（顯示建置中）
+      function openMediaModal(title, items) {
+        ensureMediaModal();
+        mediaModalTitle.textContent = title || "";
+        mediaModalCards = items || [];
+        mediaModalIndex = 0;
+        renderMediaModalCard();
+        mediaModal.classList.add("show");
+      }
 
       buildSidebar();
       render();
