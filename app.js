@@ -67,6 +67,9 @@
         t = t || "";
         if (window.marked && typeof window.marked.parse === "function") return window.marked.parse(t);
         var h = esc(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`(.+?)`/g, "<code>$1</code>");
+        // 標示語法：[[n:1]] → 與截圖標示相同的編號；[[btn:訂購]] → 按鈕樣式標籤
+        h = h.replace(/\[\[n:(\d+)\]\]/g, '<span class="step-n">$1</span>')
+             .replace(/\[\[btn:([^\]]+)\]\]/g, '<span class="ui-btn">$1</span>');
         return h.split(/\n\s*\n/).map(function (para) { return "<p>" + para.replace(/\n/g, "<br>") + "</p>"; }).join("");
       }
       function buildSidebar() {
@@ -144,7 +147,24 @@
         return images.map(function (img) {
           var src = typeof img === "string" ? img : img.src;
           var small = typeof img === "object" && img && img.small;
-          return '<figure class="shot' + (small ? " shot-small" : "") + '"><img src="' + src + '" alt="' + esc(title) + '" class="shot-img" /></figure>';
+          // marks：[{ box: [左%, 上%, 寬%, 高%], n: 編號 }]，由平台畫框，不畫在圖片上
+          var marks = (typeof img === "object" && img && img.marks) || [];
+          var markHtml = marks.map(function (m) {
+            var b = m.box;
+            var side = m.side || (b[0] < 6 ? "b" : "l");
+            return '<span class="shot-mark" data-side="' + side + '"' + (m.n ? ' data-n="' + m.n + '"' : "") +
+              ' style="left:calc(' + b[0] + "% - 5px);top:calc(" + b[1] + "% - 4px);width:calc(" + b[2] + "% + 10px);height:calc(" + b[3] + '% + 8px)"></span>';
+          }).join("");
+          var fig = '<figure class="shot' + (small ? " shot-small" : "") + '">' +
+            (markHtml ? '<div class="shot-wrap"><img src="' + src + '" alt="' + esc(title) + '" class="shot-img" />' + markHtml + "</div>"
+                      : '<img src="' + src + '" alt="' + esc(title) + '" class="shot-img" />') +
+            (typeof img === "object" && img && img.caption ? "<figcaption>" + esc(img.caption) + "</figcaption>" : "") +
+            "</figure>";
+          // fold：填欄位的步驟以答案卷為主，截圖收合成「看實際畫面」
+          if (typeof img === "object" && img && img.fold) {
+            return '<details class="shot-fold"><summary>' + esc(img.fold === true ? "看實際畫面" : img.fold) + "</summary>" + fig + "</details>";
+          }
+          return fig;
         }).join("");
       }
 
@@ -173,8 +193,75 @@
           "</figure>";
       }
 
-      function renderFieldsTable(fields) {
+      // ---------- 「答案卷」呈現（內容呈現預覽 D）----------
+      // 欄位有 ex（範例值）、kind（var／fixed／blank）或 section（區塊標題）時，改用答案卷呈現：
+      // 直接秀出要填的值；規則（value）與備註（note）收在 ⓘ 裡，點該列才展開。
+      // ex 內可用 [[c1:314]] 標記顏色，同一來源的數字用同一個顏色串起來（c1 粉紅、c2 藍、c3 黃）。
+      function isAnswerSheet(fields) {
+        return !!(fields && fields.some(function (f) { return f.ex != null || f.kind; }));
+      }
+      function asTokens(s) {
+        return esc(s).replace(/\[\[(c\d):([^\]]+)\]\]/g, '<span class="as-v $1">$2</span>')
+          .replace(/\[\[s:([^\]]+)\]\]/g, '<span class="as-sub">$1</span>');
+      }
+      function renderBanner(b) { return b ? '<div class="as-banner">' + asTokens(b) + "</div>" : ""; }
+      // 依 SAP「一般資訊」畫面的區塊與順序排列（基本資料 → 價格和數量 → 憑證資料 → 組織），
+      // 讓答案卷的順序跟螢幕上看到的一致；不在對照表裡的欄位（如成本中心）維持原順序、不分區。
+      var AS_SECTIONS = ["基本資料", "價格和數量", "憑證資料", "組織"];
+      var AS_ORDER = {
+        "項目說明": [0, 1], "物料群組": [0, 2], "期望供應商": [0, 3],
+        "評價價格": [1, 1], "價格單位": [1, 2], "已請求數量": [1, 3], "交貨日期": [1, 4],
+        "稅碼": [2, 1], "發票日期": [2, 2], "統一編號": [2, 3], "發票號碼": [2, 4], "總金額": [2, 5],
+        "稅基": [2, 6], "筆數": [2, 7], "付款日期": [2, 8], "憑證資料各欄": [2, 9],
+        "採購群組": [3, 1], "採購組織": [3, 2], "工廠／採購工廠": [3, 3], "工廠": [3, 3], "科目指派種類": [3, 4]
+      };
+      function renderAnswerSheet(fields, notes) {
+        notes = notes || {};
+        var seen = {};
+        var list = fields.map(function (f, i) { return { f: f, i: i, o: AS_ORDER[f.name] }; });
+        var secCount = {};
+        list.forEach(function (x) { if (x.o) secCount[x.o[0]] = 1; });
+        var useSec = Object.keys(secCount).length >= 2;
+        if (useSec) list.sort(function (a, b) {
+          var ka = a.o ? a.o[0] * 100 + a.o[1] : 1000 + a.i, kb = b.o ? b.o[0] * 100 + b.o[1] : 1000 + b.i;
+          return ka - kb;
+        });
+        var curSec = -1;
+        var h = '<div class="as-sheet">';
+        list.forEach(function (x) {
+          var f = x.f;
+          if (useSec && x.o && x.o[0] !== curSec) {
+            curSec = x.o[0];
+            var sn = AS_SECTIONS[curSec];
+            h += '<div class="as-sec">' + esc(sn) + (notes[sn] ? '<span class="as-sec-note">' + esc(notes[sn]) + "</span>" : "") + "</div>";
+          }
+          var kind = f.kind || (f.ex != null ? "var" : "rule");
+          seen[kind] = true;
+          if (kind === "blank") {
+            // 空格也可以帶提醒（例：費用項目的發票日期「不要點進去」），有 note 時一樣用 ⓘ 展開
+            var bw = f.note ? "<div>" + esc(f.note) + "</div>" : "";
+            h += '<div class="as-row k-blank' + (bw ? " has-why" : "") + '"><div class="as-k">' + esc(f.name) + '</div><div class="as-box">' + (f.ex ? esc(f.ex) : "") + "</div>" +
+              (bw ? '<span class="as-i" title="看提醒">ⓘ</span><div class="as-why">' + bw + "</div>" : "") + "</div>";
+            return;
+          }
+          var val = f.ex != null ? asTokens(f.ex) : esc(f.value || "");
+          // 規則文字若已經出現在方框裡（例：價格單位 1、科目指派種類 Z），就不在 ⓘ 裡重複
+          var exPlain = f.ex != null ? String(f.ex).replace(/\[\[(?:c\d|s):([^\]]+)\]\]/g, "$1") : "";
+          var showRule = f.ex != null && f.value && exPlain.indexOf(f.value) === -1;
+          var why = (showRule ? "<div>" + esc(f.value) + "</div>" : "") + (f.note ? "<div>" + esc(f.note) + "</div>" : "");
+          h += '<div class="as-row k-' + kind + (why ? " has-why" : "") + '">' +
+            '<div class="as-k">' + esc(f.name) + "</div>" +
+            '<div class="as-box">' + val + "</div>" +
+            (why ? '<span class="as-i" title="看填寫規則">ⓘ</span><div class="as-why">' + why + "</div>" : '<span class="as-i as-i-none"></span>') +
+            "</div>";
+        });
+        h += "</div>";
+        return h;
+      }
+
+      function renderFieldsTable(fields, notes) {
         if (!fields || !fields.length) return "";
+        if (isAnswerSheet(fields)) return renderAnswerSheet(fields, notes);
         var h = '<div class="field-card-list">';
         fields.forEach(function (f) {
           h += '<div class="field-card">' +
@@ -390,12 +477,20 @@
             '<span class="branch-picked-title">' + esc(opt.title || opt.label) + "</span>" +
             "</div>" +
             "</div>";
-          if (!opt.overrideFields) {
-            if (baseStep.body) h += '<div class="md text-sm mt-2">' + md(baseStep.body) + "</div>";
-            h += renderFieldsTable(baseStep.fields);
+          if (isAnswerSheet(opt.fields) || isAnswerSheet(baseStep.fields)) {
+            // 答案卷：先放說明文字，再把「共同欄位＋情境欄位」合成一張答案卷，不再分兩段
+            if (!opt.overrideFields && baseStep.body) h += '<div class="md text-sm mt-2">' + md(baseStep.body) + "</div>";
+            if (opt.body) h += '<div class="md text-sm mt-2">' + md(opt.body) + "</div>";
+            h += renderBanner(opt.banner);
+            h += renderFieldsTable((opt.overrideFields ? [] : (baseStep.fields || [])).concat(opt.fields || []), opt.sectionNotes);
+          } else {
+            if (!opt.overrideFields) {
+              if (baseStep.body) h += '<div class="md text-sm mt-2">' + md(baseStep.body) + "</div>";
+              h += renderFieldsTable(baseStep.fields);
+            }
+            if (opt.body) h += '<div class="md text-sm mt-2">' + md(opt.body) + "</div>";
+            h += renderFieldsTable(opt.fields);
           }
-          if (opt.body) h += '<div class="md text-sm mt-2">' + md(opt.body) + "</div>";
-          h += renderFieldsTable(opt.fields);
           if (opt.tip) h += '<div class="tip"><span class="tip-ico">💡</span><span>' + esc(opt.tip) + "</span></div>";
           if (baseStep.tip) h += '<div class="tip"><span class="tip-ico">💡</span><span>' + esc(baseStep.tip) + "</span></div>";
         } else if (s.showIf) {
@@ -405,12 +500,14 @@
             showShot = false;
           } else {
             h += '<div class="md text-sm">' + md(s.body) + "</div>";
-            h += renderFieldsTable(s.fields);
+            h += renderBanner(s.banner);
+            h += renderFieldsTable(s.fields, s.sectionNotes);
             if (s.tip) h += '<div class="tip"><span class="tip-ico">💡</span><span>' + esc(s.tip) + "</span></div>";
           }
         } else {
           h += '<div class="md text-sm">' + md(s.body) + "</div>";
-          h += renderFieldsTable(s.fields);
+          h += renderBanner(s.banner);
+          h += renderFieldsTable(s.fields, s.sectionNotes);
           if (s.tip) h += '<div class="tip"><span class="tip-ico">💡</span><span>' + esc(s.tip) + "</span></div>";
         }
 
@@ -631,8 +728,9 @@
 
       function plain(t) { return String(t == null ? "" : t).replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim(); }
       function fieldParts(fields) {
-        return (fields || []).map(function (f) {
-          return { text: "【" + plain(f.name) + "】" + plain(f.value) + (f.note ? "：" + plain(f.note) : ""), w: 3 };
+        return (fields || []).filter(function (f) { return f.name; }).map(function (f) {
+          var ex = f.ex ? " " + plain(String(f.ex).replace(/\[\[(?:c\d|s):([^\]]+)\]\]/g, "$1")) : "";
+          return { text: "【" + plain(f.name) + "】" + plain(f.value) + ex + (f.note ? "：" + plain(f.note) : ""), w: 3 };
         });
       }
       function stepParts(s) {
@@ -909,6 +1007,12 @@
 
       initSearch();
 
+      // 答案卷：點有 ⓘ 的列，展開／收起填寫規則
+      content.addEventListener("click", function (e) {
+        var row = e.target.closest && e.target.closest(".as-row.has-why");
+        if (row) row.classList.toggle("open");
+      });
+
       document.getElementById("brandHome").addEventListener("click", goHome);
 
       // 常用連結選單裡的稅碼對照表：改成跟「查看範例」共用同一套彈窗，不再另開分頁；
@@ -1079,7 +1183,8 @@
         overlay.setAttribute("role", "dialog");
         overlay.setAttribute("aria-modal", "true");
         overlay.setAttribute("aria-label", "放大檢視截圖");
-        overlayImg = document.createElement("img");
+        overlayImg = document.createElement("div");
+        overlayImg.className = "img-lightbox-stage";
         var closeBtn = document.createElement("button");
         closeBtn.type = "button";
         closeBtn.className = "img-lightbox-close";
@@ -1091,7 +1196,7 @@
 
         function close() {
           overlay.classList.remove("show");
-          overlayImg.src = "";
+          overlayImg.innerHTML = "";
         }
         overlay.addEventListener("click", close);
         closeBtn.addEventListener("click", function (e) {
@@ -1107,10 +1212,22 @@
       document.addEventListener("click", function (e) {
         var img = e.target.closest && e.target.closest(".shot-img");
         if (!img) return;
-        if (!window.matchMedia(MOBILE_QUERY).matches) return; // 僅手機寬度啟用，電腦版維持原本行為不變
+        // 2026-10-19：電腦版也可點擊放大；有平台標示的截圖連同標示一起放大
         ensureOverlay();
-        overlayImg.src = img.currentSrc || img.src;
-        overlayImg.alt = img.alt || "";
+        var wrap = img.closest(".shot-wrap");
+        var node;
+        if (wrap) {
+          node = wrap.cloneNode(true);
+          // 放大檢視時沿用頁面上的標示顏色（各流程的主題色）
+          var tone = getComputedStyle(wrap).getPropertyValue("--story-tone");
+          if (tone) node.style.setProperty("--story-tone", tone.trim());
+        } else {
+          node = document.createElement("img");
+          node.src = img.currentSrc || img.src;
+          node.alt = img.alt || "";
+        }
+        overlayImg.innerHTML = "";
+        overlayImg.appendChild(node);
         overlay.classList.add("show");
       });
     })();

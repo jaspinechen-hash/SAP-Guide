@@ -1,0 +1,65 @@
+/* 側邊欄工具：收合（«／»）＋拖曳邊界（只在電腦寬度啟用；手機、平板維持抽屜式） */
+.sb-collapse, .sb-rail, .sb-resizer { display: none; }
+
+@media (min-width: 1024px) {
+  .shell { position: relative; grid-template-columns: var(--sb-w, 286px) minmax(0, 1fr); transition: grid-template-columns .25s ease; }
+  .sb-dragging .shell { transition: none; }
+  .sb-dragging, .sb-dragging * { cursor: col-resize !important; user-select: none !important; }
+
+  /* 「操作流程」那一行：右側放收合鈕 */
+  .sb-head { display: flex; align-items: center; justify-content: space-between; }
+  .sb-collapse {
+    display: grid; place-items: center; width: 1.6rem; height: 1.6rem; padding: 0; margin: -.3rem -.2rem -.3rem 0;
+    border: 0; background: transparent; color: inherit; opacity: .45; cursor: pointer; border-radius: .35rem;
+    transition: opacity .15s ease, background-color .15s ease, transform .15s ease;
+  }
+  .sb-collapse:hover { opacity: 1; background: color-mix(in srgb, var(--color-base-content) 8%, transparent); transform: translateX(-1px); }
+  .sb-collapse:focus-visible { opacity: 1; outline: 2px solid var(--color-primary); outline-offset: 1px; }
+
+  /* 收合：欄寬只留一條窄邊條 */
+  .sb-collapsed .shell { grid-template-columns: 1.75rem minmax(0, 1fr); }
+  .sidebar { transition: opacity .2s ease, visibility .2s; }
+  .sb-collapsed .sidebar { opacity: 0; visibility: hidden; overflow: hidden; padding-left: 0; padding-right: 0; }
+
+  .sb-rail {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 1.75rem; z-index: 4;
+    padding: 0; border: 0; border-right: 1px solid var(--color-base-300); background: transparent; color: inherit;
+    cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s ease, background-color .15s ease;
+  }
+  .sb-collapsed .sb-rail { display: block; opacity: 1; pointer-events: auto; }
+  .sb-rail-ico { position: sticky; top: 5.2rem; display: grid; place-items: center; height: 2rem; opacity: .5; transition: opacity .15s ease, transform .15s ease; }
+  .sb-rail:hover { background: color-mix(in srgb, var(--color-base-content) 5%, transparent); }
+  .sb-rail:hover .sb-rail-ico { opacity: 1; transform: translateX(2px); }
+  .sb-rail:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+  /* 拖曳邊界：平常看不到，滑鼠靠近時出現一條主色細線 */
+  .sb-resizer {
+    display: block; position: absolute; top: 0; bottom: 0; z-index: 5;
+    left: calc(var(--sb-w, 286px) - 4px); width: 8px; cursor: col-resize; touch-action: none; outline: none;
+  }
+  .sb-resizer::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px;
+    background: var(--color-primary); opacity: 0; transition: opacity .15s ease;
+  }
+  .sb-resizer:hover::after, .sb-resizer:focus-visible::after, .sb-dragging .sb-resizer::after { opacity: .7; }
+  .sb-collapsed .sb-resizer { display: none; }
+}
+
+/* 2026-10-19：展開鈕固定在畫面左側正中間（原本是整頁高度的中間，長頁面會跑到很下面），
+   並做成明顯的小把手，好找也好點；整條窄邊條仍然都可以點。 */
+@media (min-width: 1024px) {
+  .sb-collapsed .sb-rail-ico {
+    position: fixed; top: 50%; left: 0; transform: translateY(-50%);
+    width: 1.9rem; height: 3.6rem; opacity: 1; z-index: 6;
+    background: var(--paper-card, var(--color-base-100)); color: var(--color-primary);
+    border: 1px solid var(--rule, var(--color-base-300)); border-left: 0;
+    border-radius: 0 .6rem .6rem 0;
+    box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .25);
+  }
+  .sb-collapsed .sb-rail-ico svg { width: 18px; height: 18px; }
+  .sb-collapsed .sb-rail:hover .sb-rail-ico {
+    transform: translateY(-50%); width: 2.2rem;
+    background: var(--color-primary); color: var(--color-primary-content, #fff); border-color: var(--color-primary);
+  }
+}
+@media print { .sb-rail-ico { display: none !important; } }

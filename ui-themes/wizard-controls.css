@@ -1,0 +1,19 @@
+/* ==========================================================================
+   步驟控制列（上一步／進度條／下一步）
+   1. 黏在畫面底部：閱讀步驟內容時一直按得到；捲過整個步驟區後回到原位
+   2. 手機寬度：進度條在上一行，「上一步」「下一步」左右並排在下一行
+   3. 列印時不黏底
+   ========================================================================== */
+.wiz-controls {
+  position: sticky; bottom: 0; z-index: 20;
+  margin-left: -.5rem; margin-right: -.5rem; padding: .7rem .5rem .8rem;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+@media (max-width: 639px) {
+  .wiz-controls { gap: .55rem .75rem; }
+  .wiz-controls .wiz-progress { order: 1; flex: 1 1 60%; }
+  .wiz-controls .wiz-count { order: 2; }
+  .wiz-controls #stepPrev { order: 3; }
+  .wiz-controls #stepNext { order: 4; margin-left: auto; }
+}
+@media print { .wiz-controls { position: static; backdrop-filter: none; } }

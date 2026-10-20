@@ -1,0 +1,69 @@
+/* SAP Guidehub · Designed & maintained by Jaspine · © 2026 */
+/* ---------- 內容呈現預覽 D：答案卷 ----------
+   每列：欄位名稱｜要填的值（方框）｜ⓘ；規則收在 ⓘ 裡，點該列展開。
+   方框樣式代表「要不要動腦」：白底粗字＝範例值、虛線淡字＝依實際情況、淡綠＝固定值、斜線＝空著不填。 */
+.as-sheet { display: flex; flex-direction: column; gap: .35rem; margin-top: .4rem; }
+.as-row {
+  display: grid; grid-template-columns: 7.6rem minmax(0, 1fr) 1.4rem; align-items: center;
+  gap: .25rem .7rem;
+}
+.as-row.has-why { cursor: pointer; }
+.as-k { font-size: .8rem; opacity: .62; line-height: 1.3; }
+.as-box {
+  min-height: 2.35rem; display: flex; align-items: center; flex-wrap: wrap; gap: .3rem;
+  padding: .4rem .7rem; border-radius: .55rem; border: 1px solid var(--color-base-300);
+  background: var(--color-base-100); font-size: .92rem; font-weight: 700; line-height: 1.35;
+}
+.as-row.has-why:hover .as-box { border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-base-300)); }
+.as-row.k-rule .as-box { font-weight: 500; color: #6b7280; border-style: dashed; }
+.as-row.k-fixed .as-box { font-weight: 500; background: color-mix(in srgb, #5cc9a3 12%, var(--color-base-100)); border-color: color-mix(in srgb, #5cc9a3 45%, transparent); color: #23735a; }
+.as-row.k-blank .as-box {
+  min-height: 1.5rem; padding: .15rem .6rem; font-size: .76rem; font-weight: 500; color: #9aa0aa;
+  background: repeating-linear-gradient(135deg, #f4f4f2 0 6px, #ebebe8 6px 12px); border: 1px dashed #d6d6d1;
+}
+.as-row.k-blank .as-k { font-size: .76rem; opacity: .45; }
+.as-i { font-size: .85rem; opacity: .4; text-align: center; user-select: none; }
+.as-row.open .as-i { opacity: .9; color: var(--color-primary); }
+.as-why {
+  grid-column: 2 / 4; display: none; font-size: .8rem; line-height: 1.55;
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-base-100));
+  border-radius: .5rem; padding: .45rem .7rem; margin-bottom: .2rem;
+}
+.as-why div + div { margin-top: .2rem; opacity: .8; }
+.as-row.open .as-why { display: block; }
+.as-sec {
+  margin-top: .8rem; padding-top: .55rem; border-top: 1px solid var(--color-base-300);
+  font-size: .74rem; font-weight: 700; letter-spacing: .05em; opacity: .6;
+}
+.as-sec-note { font-weight: 500; letter-spacing: 0; margin-left: .5rem; }
+
+/* 同一來源的數字用同一個顏色 */
+.as-v { display: inline-block; border-radius: .4rem; padding: .02rem .5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.as-v.c1 { background: #ffe3eb; color: #c93d64; }
+.as-v.c2 { background: #dcecff; color: #2a72c0; }
+.as-v.c3 { background: #fbf0c4; color: #806200; }
+.as-banner {
+  margin-top: .7rem; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem;
+  font-size: .85rem; padding: .55rem .8rem; border-radius: .7rem;
+  background: var(--color-base-200); border: 1px solid var(--color-base-300);
+}
+
+
+@media (max-width: 560px) {
+  .as-row { grid-template-columns: minmax(0, 1fr) 1.4rem; }
+  .as-k { grid-column: 1 / 3; margin-top: .2rem; }
+  .as-why { grid-column: 1 / 3; }
+}
+.as-sheet > .as-sec:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+/* 方框內的附註小字（例：公司別的實際值） */
+.as-sub { font-size: .78rem; font-weight: 500; opacity: .6; margin-left: .2rem; }
+
+/* ---------- 敘事風整合（2026-10-19）：跟著配色變數走，夜間配色不刺眼 ---------- */
+.as-row.k-rule .as-box { color: var(--ink-soft, #6b7280); }
+.as-k { color: var(--ink-soft, inherit); opacity: 1; }
+.as-row.k-blank .as-k { opacity: .7; }
+html[data-palette="night"] .as-row.k-fixed .as-box { background: color-mix(in srgb, #8cc6a2 14%, var(--color-base-100)); border-color: color-mix(in srgb, #8cc6a2 40%, transparent); color: #a9d9bb; }
+html[data-palette="night"] .as-row.k-blank .as-box { color: #8f8879; background: repeating-linear-gradient(135deg, #36342f 0 6px, #3e3b36 6px 12px); border-color: #55504a; }
+html[data-palette="night"] .as-v.c1 { background: #4a2d36; color: #f2a6bc; }
+html[data-palette="night"] .as-v.c2 { background: #2b3a4c; color: #9cc6ef; }
+html[data-palette="night"] .as-v.c3 { background: #463d22; color: #ecd27e; }

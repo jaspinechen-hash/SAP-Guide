@@ -1,0 +1,52 @@
+/* 「常用連結」下拉選單：拿掉各項目左側的小圖示，只留文字（觸發按鈕本身的圖示保留） */
+.topmenu-panel li > a > svg,
+.topmenu-panel summary > svg { display: none; }
+.topmenu-panel a, .topmenu-panel summary { gap: 0; }
+/* 子選單（常用表單／常用參考資料）展開時，子項目稍微縮排，跟主項目區隔 */
+.topmenu-panel details > ul { margin-left: .9rem; padding-left: .6rem; }
+.topmenu-panel details > ul::before { display: none; }
+.topmenu-panel details > ul { margin-left: .75rem; padding-left: 0; }
+/* 「前往 SAP 系統」：做成淡主色底的按鈕（無框、無箭頭），跟下方兩個下拉項目區隔。
+   文字置中，避免被誤看成「游標停在這一行」的清單 hover 狀態。顏色跟著目前配色的主色走。 */
+.topmenu-panel > li:first-child { margin-bottom: .35rem; }
+.topmenu-panel > li:first-child > a {
+  display: flex; justify-content: center; font-weight: 600;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-base-100));
+  border-radius: .5rem;
+  transition: background-color .15s ease;
+}
+.topmenu-panel > li:first-child > a:hover,
+.topmenu-panel > li:first-child > a:active { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 21%, var(--color-base-100)); }
+.topmenu-panel > li:first-child > a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* ---------- 右上角選單按鈕：只有圖示（☰／⋯），不寫字 ---------- */
+.topbar-link.menu-trigger { width: 2.3rem; height: 2.3rem; padding: 0; justify-content: center; gap: 0; }
+.menu-trigger .menu-ico-more { display: none; }
+@media (max-width: 1023px) {
+  .menu-trigger .menu-ico-bars { display: none; }
+  .menu-trigger .menu-ico-more { display: block; }
+}
+.menu-trigger .menu-ico { transition: transform .2s ease; }
+.dropdown:hover .menu-trigger .menu-ico-bars, .dropdown:focus-within .menu-trigger .menu-ico-bars { transform: scaleX(.85); }
+
+/* ---------- 選單內的「配色」列 ---------- */
+.topmenu-panel { min-width: 14.5rem; }
+.topmenu-panel li.palette-divider { height: 1px; padding: 0; margin: .45rem .5rem .2rem; background: var(--color-base-300); opacity: 1; }
+.topmenu-panel li.palette-row {
+  padding: .35rem .75rem .5rem; opacity: 1; color: inherit; font-size: inherit; font-weight: inherit;
+  text-transform: none; letter-spacing: 0; cursor: default;
+}
+.palette-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; }
+.palette-row-label { font-size: .88rem; }
+.palette-row-name { font-size: .74rem; opacity: .6; }
+.palette-swatches { display: flex; gap: .5rem; }
+.palette-swatch {
+  width: 1.75rem; height: 1.75rem; padding: 0; border: 0; background: none; cursor: pointer;
+  display: grid; place-items: center; border-radius: 999px;
+  box-shadow: 0 0 0 1px transparent; transition: box-shadow .15s ease, transform .15s ease;
+}
+.palette-swatch .palette-dot { width: 1.35rem; height: 1.35rem; }
+.palette-swatch:hover { transform: scale(1.1); }
+.palette-swatch.active { box-shadow: 0 0 0 2px var(--color-base-100), 0 0 0 3.5px var(--color-primary); }
+.palette-swatch:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }

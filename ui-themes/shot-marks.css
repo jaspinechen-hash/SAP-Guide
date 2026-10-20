@@ -1,0 +1,69 @@
+/* SAP Guidehub · 截圖標示（平台畫的框，不畫在圖片上）
+   - 框與編號一律用主題色，跟著配色（米白／港灣藍／夜讀）自動換色
+   - 文字步驟裡的 [[n:1]] 編號、[[btn:訂購]] 按鈕標籤與圖上的標示同一套樣式 */
+.shot-wrap { position: relative; display: block; }
+.shot-wrap .shot-img { margin: 0; }
+.shot-mark {
+  position: absolute; pointer-events: none;
+  border: 3px solid var(--story-tone, var(--color-primary));
+  border-radius: .45rem;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--story-tone, var(--color-primary)) 25%, transparent), 0 0 18px color-mix(in srgb, var(--story-tone, var(--color-primary)) 35%, transparent);
+  animation: shot-mark-in .5s ease-out both;
+}
+.shot-mark[data-n]::after {
+  content: attr(data-n);
+  position: absolute; top: 50%; right: calc(100% + .35rem); transform: translateY(-50%);
+  width: 1.35rem; height: 1.35rem; border-radius: 999px;
+  display: grid; place-items: center;
+  font: 700 .72rem/1 var(--serif, inherit);
+  background: var(--story-tone, var(--color-primary)); color: var(--paper-card, #fff);
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+@keyframes shot-mark-in { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .shot-mark { animation: none; } }
+
+/* 文字中的步驟編號與按鈕標籤 */
+.step-n {
+  display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; margin: 0 .15rem;
+  border-radius: 999px; vertical-align: .05em;
+  font: 700 .7rem/1 var(--serif, inherit);
+  background: var(--story-tone, var(--color-primary)); color: var(--paper-card, #fff);
+}
+.ui-btn {
+  display: inline-block; padding: .02rem .5rem; margin: 0 .1rem; border-radius: .35rem;
+  font-size: .85em; font-weight: 600; line-height: 1.5; white-space: nowrap;
+  color: var(--story-tone, var(--color-primary));
+  border: 1px solid color-mix(in srgb, var(--story-tone, var(--color-primary)) 55%, transparent);
+  background: color-mix(in srgb, var(--story-tone, var(--color-primary)) 8%, var(--paper-card, #fff));
+}
+
+/* 填欄位的步驟：答案卷為主，截圖收合 */
+.shot-fold { margin-top: .2rem; }
+.shot-fold > summary {
+  cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .82rem; color: var(--ink-soft, inherit); padding: .25rem 0;
+}
+.shot-fold > summary::-webkit-details-marker { display: none; }
+.shot-fold > summary::before { content: "▸"; transition: transform .15s ease; display: inline-block; }
+.shot-fold[open] > summary::before { transform: rotate(90deg); }
+.shot-fold > summary:hover { color: var(--story-tone, var(--color-primary)); }
+.shot-fold[open] > .shot { margin-top: .5rem; }
+
+@media print { .shot-mark { animation: none; } .shot-fold:not([open]) > .shot { display: none; } }
+
+/* 徽章位置：預設在框左側；框太靠圖片左緣時改放框的左下方，避免跑出圖外 */
+.shot-mark[data-side="b"][data-n]::after { top: calc(100% + .3rem); right: auto; left: 0; transform: none; }
+.shot-mark[data-side="r"][data-n]::after { right: auto; left: calc(100% + .35rem); }
+.shot-mark[data-side="t"][data-n]::after { top: auto; bottom: calc(100% + .3rem); right: auto; left: 0; transform: none; }
+
+/* 點擊截圖放大（電腦與手機都可用）；有標示的截圖連同標示一起放大 */
+.shot-img { cursor: zoom-in; }
+.img-lightbox-stage { display: flex; align-items: center; justify-content: center; max-width: 100%; max-height: 100%; }
+.img-lightbox-stage > img,
+.img-lightbox-stage .shot-img {
+  display: block; width: auto; height: auto;
+  max-width: calc(100vw - 2.4rem); max-height: calc(100vh - 2.4rem);
+  border: 0; border-radius: .6rem; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); cursor: zoom-out;
+}
+.img-lightbox-stage .shot-wrap { display: inline-block; position: relative; line-height: 0; }
+.img-lightbox-stage .shot-mark { animation: none; }
