@@ -1,0 +1,32 @@
+/* 自訂捲軸：M 凹槽——軌道像紙面壓出的一道淺溝，捲軸嵌在裡面；滑鼠移上去變主題色。顏色跟著三種配色（米白／港灣藍／夜讀）自動換 */
+/* vendor.css（daisyUI）在整頁設了標準的 scrollbar-color；新版 Chrome／Edge 只要有這個屬性就會忽略下面的自訂樣式，所以先重設回 auto */
+:root, :root * { scrollbar-color: auto !important; scrollbar-width: auto !important; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track {
+  background-color: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rule) 80%, transparent);
+}
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--ink-soft) 45%, transparent);
+  border-radius: 999px;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--color-primary) 80%, transparent); }
+::-webkit-scrollbar-thumb:active { background-color: var(--color-primary); }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+/* 小區塊（搜尋結果、選單、側邊欄、更新提示）用細一點的凹槽 */
+.topsearch-panel::-webkit-scrollbar, .topmenu-panel::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar, .update-notice-body::-webkit-scrollbar { width: 9px; height: 9px; }
+.topsearch-panel::-webkit-scrollbar-track, .topmenu-panel::-webkit-scrollbar-track,
+.sidebar::-webkit-scrollbar-track, .update-notice-body::-webkit-scrollbar-track { border-width: 2px; }
+.topsearch-panel::-webkit-scrollbar-thumb, .topmenu-panel::-webkit-scrollbar-thumb,
+.sidebar::-webkit-scrollbar-thumb, .update-notice-body::-webkit-scrollbar-thumb { border-width: 3px; }
+/* Firefox 不支援上面的寫法，改用標準屬性（細捲軸＋配色，無凹槽效果） */
+@supports (-moz-appearance: none) {
+  :root, :root * { scrollbar-width: thin !important; scrollbar-color: color-mix(in srgb, var(--ink-soft) 45%, transparent) color-mix(in srgb, var(--ink) 6%, transparent) !important; }
+}

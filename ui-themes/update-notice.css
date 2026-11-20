@@ -1,0 +1,73 @@
+/* 首頁「平台更新」提示視窗：打開平台時跳出一次，關掉後同一版本不再出現；右上角選單可再打開 */
+.update-notice-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+  background: color-mix(in srgb, var(--shadow-ink, rgba(0,0,0,.5)) 80%, transparent);
+  opacity: 0; transition: opacity .2s ease;
+}
+.update-notice-overlay.show { opacity: 1; }
+.update-notice {
+  position: relative; width: min(30rem, 100%); max-height: min(36rem, calc(100vh - 2.5rem));
+  display: flex; flex-direction: column;
+  background: var(--paper-card); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: .6rem;
+  box-shadow: var(--shadow-lift);
+  transform: translateY(8px); transition: transform .2s ease;
+}
+.update-notice-overlay.show .update-notice { transform: none; }
+.update-notice-head { padding: 1.35rem 1.5rem .85rem; border-bottom: 1px solid var(--rule); }
+.update-notice-kicker { font-size: .78rem; letter-spacing: .08em; color: var(--color-primary); font-weight: 600; }
+.update-notice-title { margin: .2rem 0 0; font-family: var(--serif); font-size: 1.3rem; font-weight: 700; line-height: 1.35; }
+.update-notice-close {
+  position: absolute; top: .7rem; right: .7rem; width: 2rem; height: 2rem; border: 0; border-radius: 999px;
+  background: transparent; color: var(--ink-soft); font-size: 1rem; cursor: pointer;
+}
+.update-notice-close:hover { background: var(--hl); color: var(--ink); }
+.update-notice-body { overflow-y: auto; padding: .9rem 1.5rem .4rem; }
+.update-notice-section + .update-notice-section { margin-top: 1rem; }
+.update-notice-section h3 { margin: 0 0 .45rem; font-size: .82rem; font-weight: 600; color: var(--ink-soft); }
+.update-notice-list { list-style: none; margin: 0; padding: 0; }
+.update-notice-list li { display: flex; gap: .65rem; padding: .5rem 0; line-height: 1.6; font-size: .93rem; }
+.update-notice-list li + li { border-top: 1px dashed var(--rule); }
+.update-notice-ico { flex: none; width: 1.6rem; text-align: center; }
+.update-notice-list b { font-weight: 600; }
+.update-notice-list .eg { display: block; font-size: .84rem; color: var(--ink-soft); }
+.update-notice-foot { display: flex; justify-content: flex-end; padding: .85rem 1.5rem 1.2rem; }
+.update-notice-ok {
+  border: 0; border-radius: .4rem; padding: .55rem 1.4rem; cursor: pointer; font-weight: 600;
+  background: var(--color-primary); color: var(--color-primary-content);
+}
+.update-notice-ok:hover { filter: brightness(1.06); }
+.update-notice-ok:focus-visible, .update-notice-close:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+@media (max-width: 639px) {
+  .update-notice-overlay { align-items: flex-end; padding: .75rem; }
+  .update-notice-head { padding: 1.15rem 1.2rem .75rem; }
+  .update-notice-body { padding: .75rem 1.2rem .3rem; }
+  .update-notice-foot { padding: .75rem 1.2rem 1rem; }
+  .update-notice-ok { width: 100%; padding: .7rem; }
+}
+@media print { .update-notice-overlay { display: none !important; } }
+
+/* 視窗底部：左邊「看所有更新紀錄」，右邊「我知道了」 */
+.update-notice-foot { justify-content: space-between; align-items: center; gap: .75rem; }
+.update-notice-more { border: 0; background: none; padding: .4rem 0; cursor: pointer; color: var(--color-primary); font-size: .88rem; }
+.update-notice-more:hover { text-decoration: underline; }
+@media (max-width: 639px) {
+  .update-notice-foot { flex-direction: column-reverse; align-items: stretch; }
+  .update-notice-more { text-align: center; }
+}
+
+/* ---------- 更新紀錄頁 ---------- */
+.update-log { max-width: 46rem; padding: 2.5rem 0 3rem; }
+.update-log-title { font-family: var(--serif); font-size: 2rem; font-weight: 700; margin: 0; }
+.update-log-lead { margin: .5rem 0 2rem; color: var(--ink-soft); }
+.update-log-entry { position: relative; padding: 0 0 1.75rem 1.5rem; border-left: 2px solid var(--rule); }
+.update-log-entry::before {
+  content: ""; position: absolute; left: -7px; top: .3rem; width: 12px; height: 12px; border-radius: 999px;
+  background: var(--paper); border: 2px solid var(--color-primary);
+}
+.update-log-entry:first-of-type::before { background: var(--color-primary); }
+.update-log-entry:last-child { padding-bottom: 0; }
+.update-log-date { display: flex; align-items: center; gap: .6rem; font-weight: 600; font-size: 1.05rem; margin-bottom: .35rem; }
+.update-log-new { font-size: .72rem; font-weight: 600; padding: .1rem .5rem; border-radius: 999px; color: var(--color-primary-content); background: var(--color-primary); }
+.update-log .update-notice-list li { font-size: .96rem; }

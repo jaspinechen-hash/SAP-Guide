@@ -67,3 +67,8 @@
 }
 .img-lightbox-stage .shot-wrap { display: inline-block; position: relative; line-height: 0; }
 .img-lightbox-stage .shot-mark { animation: none; }
+
+/* 夜讀配色：截圖與示意圖稍微調暗（約 90%），避免在炭灰底上太刺眼；列印時不受影響（列印強制淺色） */
+html[data-palette="night"] .shot-img,
+html[data-palette="night"] figure > img,
+html[data-palette="night"] figure > video { filter: brightness(.9); }
