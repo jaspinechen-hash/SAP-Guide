@@ -717,6 +717,7 @@
         closeSidebar();
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
+      window.sapGuide = { goHome: goHome }; // 給 ui-themes/update-notice.js 的「更新紀錄」頁使用
 
 
       // ---------- 全站搜尋（頂欄搜尋欄）----------
@@ -791,6 +792,45 @@
         });
       }
 
+      // ---------- 語意搜尋（類 AI）----------
+      // 不用打出完整名稱，用平常的說法、整句問題也找得到：
+      // 1. 先拿掉「怎麼、如何、要、哪個…」這類問句用語；
+      // 2. 把句子拆成詞（用下方同義詞表＋平台裡的欄位名稱、流程名稱當字典）；
+      // 3. 每個詞連同它的同義詞一起比對（例：「報帳」也會找「請款、報支」）；
+      // 4. 依「命中幾個概念、命中在標題還是內文、是原詞還是同義詞」排序。
+      // 想讓某個說法也找得到：在 SYN 加一組同義詞即可（同一組裡的詞互通）。
+      var SYN = [
+        ["請款", "報支", "報帳", "報銷", "核銷", "請錢", "代墊", "墊款", "報"],
+        ["差旅", "出差", "旅費", "高鐵", "交通", "交通費", "車資", "計程車", "火車", "住宿", "機票", "油資"],
+        ["發票", "憑證", "收據", "單據"],
+        ["請購", "採購", "購買", "買", "下單", "訂購", "請購單"],
+        ["固定資產", "列管", "資產", "設備", "電腦", "筆電", "機台", "螢幕"],
+        ["收貨", "驗收", "入庫", "到貨", "收料", "過帳"],
+        ["請假", "休假", "假單", "特休", "病假", "事假", "補休", "假別"],
+        ["代理人", "代理", "職務代理", "代理人員"],
+        ["稅", "稅額", "稅碼", "營業稅", "稅基", "未稅", "含稅", "5%"],
+        ["金額", "價格", "價錢", "單價", "總金額", "費用金額", "多少錢"],
+        ["附件", "上傳", "附檔", "檔案", "電子檔"],
+        ["列印", "印", "印出", "封面", "pdf", "匯出", "另存"],
+        ["簽核", "審核", "核准", "電簽", "簽名", "主管", "核發", "送審"],
+        ["我的最愛", "最愛", "捷徑", "功能磚", "常用"],
+        ["主題", "外觀", "顏色", "深色", "佈景"],
+        ["料號", "物料", "品號", "產品", "物料主檔"],
+        ["供應商", "廠商"],
+        ["委外", "服務", "外包", "清潔", "不需收貨"],
+        ["交貨日期", "付款日期", "發票日期", "日期"],
+        ["欄位", "表格", "配置", "調整配置", "顯示欄位", "欄寬"],
+        ["excel", "範本", "表單", "xlsx", "報支單"],
+        ["人資", "交付人資", "人事"],
+        ["財務", "繳交財務", "財會"],
+        ["新增", "建立", "開單", "建檔"]
+      ];
+      var STOP = ["請問", "請教", "我要", "我想", "想要", "想問", "如何", "怎麼樣", "怎麼", "怎樣", "要怎麼", "該怎麼", "應該", "可以", "能不能", "是否", "哪裡", "在哪", "哪個", "哪一個", "哪些", "什麼", "甚麼", "需要", "必須", "要走", "要用", "流程", "步驟", "教學", "一下", "一個", "如果", "的話", "時候", "時", "的", "了", "嗎", "呢", "吧", "啊", "喔", "要", "走", "該", "去", "做", "辦", "跟", "和", "與", "及", "或", "我", "你", "誰", "找", "哪", "?", "？", "!", "！", "。"];
+      STOP.sort(function (a, b) { return b.length - a.length; });
+      var STOP_RE = new RegExp(STOP.map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|"), "gi");
+      var SYN_L = SYN.map(function (g) { return g.map(function (w) { return w.toLowerCase(); }); });
+      var vocab = [];
+
       function splitTerms(q) {
         return String(q || "").toLowerCase().split(/[\s,，、]+/).filter(Boolean);
       }
@@ -800,30 +840,130 @@
         return new RegExp("(" + sorted.map(escRe).join("|") + ")", "gi");
       }
       function hl(text, terms) {
+        if (!terms || !terms.length) return esc(text);
         var re = termsRegex(terms);
         return String(text).split(re).map(function (seg, n) {
           return n % 2 ? "<mark>" + esc(seg) + "</mark>" : esc(seg);
         }).join("");
       }
 
-      function runSearch(q) {
-        var terms = splitTerms(q);
-        if (!terms.length) return [];
-        var out = [];
-        searchIndex.forEach(function (e, order) {
-          var score = 0;
-          for (var t = 0; t < terms.length; t++) {
-            var best = 0;
-            for (var n = 0; n < e.hay.length; n++) {
-              if (e.hay[n].indexOf(terms[t]) !== -1 && e.parts[n].w > best) best = e.parts[n].w;
-            }
-            if (!best) return; // 每個關鍵字都要出現（AND）
-            score += best;
-          }
-          out.push({ e: e, score: score, order: order });
+      function buildVocab() {
+        var v = {};
+        SYN_L.forEach(function (g) { g.forEach(function (w) { v[w] = 1; }); });
+        searchIndex.forEach(function (e) {
+          if (e.kind === "proc" || e.kind === "ref") v[plain(e.title).toLowerCase()] = 1;
+          e.parts.forEach(function (p) {
+            var m = p.text.match(/^【([^】]+)】/);
+            if (m && m[1].length <= 8) v[m[1].toLowerCase()] = 1;
+          });
         });
-        out.sort(function (a, b) { return b.score - a.score || a.order - b.order; });
-        return out.slice(0, 40);
+        vocab = Object.keys(v).sort(function (a, b) { return b.length - a.length; });
+      }
+      function inIndex(t) {
+        for (var i = 0; i < searchIndex.length; i++)
+          for (var n = 0; n < searchIndex[i].hay.length; n++)
+            if (searchIndex[i].hay[n].indexOf(t) !== -1) return true;
+        return false;
+      }
+      function isSynWord(w) { return SYN_L.some(function (g) { return g.indexOf(w) !== -1; }); }
+      // 把一段沒有空格的中文拆成詞；字典裡找不到的部分，用相鄰兩字（雙字詞）去比對
+      function segment(chunk) {
+        if (/^[a-z0-9%.\-]+$/i.test(chunk) || (chunk.length <= 6 && inIndex(chunk))) return [{ w: chunk }];
+        var out = [], rest = "", i = 0;
+        function flush() {
+          if (rest.length >= 2) {
+            var grams = [];
+            for (var k = 0; k + 2 <= rest.length; k++) grams.push(rest.slice(k, k + 2));
+            out.push({ grams: grams, raw: rest });
+          }
+          rest = "";
+        }
+        while (i < chunk.length) {
+          var hit = null;
+          for (var v = 0; v < vocab.length; v++) {
+            var w = vocab[v];
+            if ((w.length >= 2 || isSynWord(w)) && chunk.substr(i, w.length) === w) { hit = w; break; }
+          }
+          if (hit) { flush(); out.push({ w: hit }); i += hit.length; }
+          else { rest += chunk.charAt(i); i++; }
+        }
+        flush();
+        return out;
+      }
+      // 每個詞 → 一個「概念」：原詞（權重 1）＋同義詞（0.8）；拆不出來的部分用雙字詞（0.45）
+      function toConcepts(q) {
+        var cleaned = String(q || "").toLowerCase().replace(STOP_RE, " ");
+        var chunks = splitTerms(cleaned);
+        var concepts = [], usedGroups = {};
+        chunks.forEach(function (c) {
+          segment(c).forEach(function (tok) {
+            if (tok.grams) {
+              concepts.push({ alts: tok.grams.map(function (g) { return { w: g, f: 0.45 }; }), weak: true });
+              return;
+            }
+            var w = tok.w, alts = [{ w: w, f: 1 }], seen = {};
+            seen[w] = 1;
+            SYN_L.forEach(function (g, gi) {
+              var related = g.indexOf(w) !== -1 || (w.length >= 2 && g.some(function (x) { return x.length >= 2 && w.indexOf(x) !== -1; }));
+              if (!related) return;
+              if (usedGroups[gi] && g.indexOf(w) !== -1) { alts = null; return; } // 同一組的詞已經出現過，不重複計分
+              usedGroups[gi] = 1;
+              g.forEach(function (x) { if (alts && !seen[x]) { seen[x] = 1; alts.push({ w: x, f: 0.8 }); } });
+            });
+            if (alts) concepts.push({ alts: alts, orig: w });
+          });
+        });
+        return concepts;
+      }
+
+      function runSearch(q) {
+        var res = [];
+        res.terms = [];
+        res.fuzzy = false;
+        var concepts = toConcepts(q);
+        if (!concepts.length) {
+          // 整句都是問句用語（例如只打「怎麼」），就退回原本的逐字比對
+          concepts = splitTerms(q).map(function (t) { return { alts: [{ w: t, f: 1 }], orig: t }; });
+        }
+        if (!concepts.length) return res;
+        // 拆不出來的碎詞（weak）只用來加分，不算在「至少要命中幾個概念」裡
+        var nC = concepts.filter(function (c) { return !c.weak; }).length;
+        var need = nC <= 1 ? 1 : Math.max(1, Math.ceil(nC * 0.6));
+        var anyStrict = false, allTerms = {};
+        searchIndex.forEach(function (e, order) {
+          var score = 0, matched = 0, extra = 0, strict = true, hits = [];
+          concepts.forEach(function (c) {
+            var best = 0, bestExact = false, cHits = [];
+            c.alts.forEach(function (a) {
+              for (var n = 0; n < e.hay.length; n++) {
+                if (e.hay[n].indexOf(a.w) === -1) continue;
+                var v = e.parts[n].w * a.f;
+                if (cHits.indexOf(a.w) === -1) cHits.push(a.w);
+                if (v > best) best = v;
+                if (a.f === 1) bestExact = true;
+              }
+            });
+            if (c.weak) { if (best) { extra += best; hits = hits.concat(cHits); } return; }
+            if (best) { matched++; score += best; hits = hits.concat(cHits); }
+            if (!bestExact) strict = false;
+          });
+          if (nC === 0 ? !extra : matched < need) return;
+          if (nC === 0) strict = false;
+          if (strict) anyStrict = true;
+          var cov = nC ? matched / nC : 1;
+          score += extra;
+          res.push({ e: e, score: score * cov * cov + (strict ? 1000 : 0), order: order, hits: hits });
+        });
+        res.sort(function (a, b) { return b.score - a.score || a.order - b.order; });
+        var out = res.slice(0, 40);
+        out.forEach(function (r) {
+          // 只標示較有意義的命中字（有原詞命中時，就不標同一概念裡的雙字詞碎片）
+          r.hits = r.hits.filter(function (h, k, arr) { return arr.indexOf(h) === k; });
+          r.hits.forEach(function (h) { allTerms[h] = 1; });
+        });
+        out.terms = Object.keys(allTerms);
+        out.fuzzy = out.length > 0 && !anyStrict;
+        return out;
       }
 
       function snippetFor(e, terms) {
@@ -840,6 +980,7 @@
           return esc(pick.length > 60 ? pick.slice(0, 60) + "…" : pick);
         }
         var lowPick = pick.toLowerCase(), pos = Infinity;
+        if (!terms.length) return esc(pick.length > 60 ? pick.slice(0, 60) + "…" : pick);
         terms.forEach(function (t) { var x = lowPick.indexOf(t); if (x !== -1 && x < pos) pos = x; });
         var start = Math.max(0, pos - 22), end = Math.min(pick.length, start + 72);
         return (start > 0 ? "…" : "") + hl(pick.slice(start, end), terms) + (end < pick.length ? "…" : "");
@@ -920,9 +1061,10 @@
         var clearBtn = document.getElementById("topSearchClear");
         if (!box || !input || !panel) return;
         buildSearchIndex();
+        buildVocab();
         // 手機寬度空間較窄，提示文字縮短，避免被截斷
         var narrowMq = window.matchMedia("(max-width: 639px)");
-        function syncPlaceholder() { input.placeholder = narrowMq.matches ? "搜尋…" : "搜尋流程、步驟、欄位…"; }
+        function syncPlaceholder() { input.placeholder = narrowMq.matches ? "搜尋或直接問…" : "搜尋，或直接描述要做的事…"; }
         syncPlaceholder();
         if (narrowMq.addEventListener) narrowMq.addEventListener("change", syncPlaceholder);
         var results = [], activeRes = -1, terms = [];
@@ -933,16 +1075,18 @@
           var q = input.value.trim();
           box.classList.toggle("has-value", !!input.value);
           if (!q) {
-            panel.innerHTML = '<div class="search-empty">可搜尋流程名稱、步驟、欄位名稱或填寫說明<br><span class="search-empty-eg">例如：稅基、發票號碼、固定資產、成本中心</span></div>';
+            panel.innerHTML = '<div class="search-empty">可以打關鍵字，也可以直接用平常的說法問<br><span class="search-empty-eg">例如：稅基、成本中心、高鐵費怎麼報、買筆電要走哪個流程</span></div>';
             return;
           }
-          terms = splitTerms(q);
           results = runSearch(q);
+          terms = results.terms;
           if (!results.length) {
             panel.innerHTML = '<div class="search-empty">找不到符合「' + esc(q) + '」的內容</div>';
             return;
           }
-          var h = '<div class="search-count">共 ' + results.length + (results.length >= 40 ? "+" : "") + " 筆結果</div>";
+          var h = results.fuzzy
+            ? '<div class="search-count">沒有完全相符的字詞，以下是相關的結果（' + results.length + (results.length >= 40 ? "+" : "") + " 筆）</div>"
+            : '<div class="search-count">共 ' + results.length + (results.length >= 40 ? "+" : "") + " 筆結果</div>";
           h += results.map(function (r, n) {
             var e = r.e;
             var p = e.kind === "ref" ? null : DATA[e.i];
@@ -951,10 +1095,10 @@
             var showTitle = e.kind !== "proc" && e.kind !== "ref";
             return '<button type="button" class="search-item' + (n === activeRes ? " active" : "") + '" data-n="' + n + '" role="option">' +
               '<span class="search-item-top"><span class="search-dot" data-tone="' + esc(tone) + '"></span>' +
-              '<span class="search-proc">' + (e.kind === "proc" || e.kind === "ref" ? hl(e.title, terms) : esc(head)) + "</span>" +
+              '<span class="search-proc">' + (e.kind === "proc" || e.kind === "ref" ? hl(e.title, r.hits) : esc(head)) + "</span>" +
               (e.loc ? '<span class="search-loc">' + esc(e.loc) + "</span>" : "") + "</span>" +
-              (showTitle ? '<span class="search-item-title">' + hl(e.title, terms) + "</span>" : "") +
-              (e.kind === "ref" ? "" : '<span class="search-snippet">' + snippetFor(e, terms) + "</span>") +
+              (showTitle ? '<span class="search-item-title">' + hl(e.title, r.hits) + "</span>" : "") +
+              (e.kind === "ref" ? "" : '<span class="search-snippet">' + snippetFor(e, r.hits) + "</span>") +
               "</button>";
           }).join("");
           panel.innerHTML = h;
@@ -971,7 +1115,7 @@
           if (!r) return;
           close();
           input.blur();
-          goToHit(r.e, terms);
+          goToHit(r.e, r.hits.length ? r.hits : terms);
         }
 
         input.addEventListener("input", function () { activeRes = -1; paint(); open(); });
